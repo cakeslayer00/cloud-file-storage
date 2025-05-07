@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: changeset/create-user-table.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: changeset/alter-table-name.yaml
+      relativeToChangelogFile: true

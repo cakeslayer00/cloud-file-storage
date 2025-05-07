@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: db-dev
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+    volumes:
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 134217728
+    ports:
+      - "5432:5432"
