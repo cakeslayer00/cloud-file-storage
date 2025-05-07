@@ -3,9 +3,7 @@ package com.vladsv.cloud_file_storage.mapper;
 import com.vladsv.cloud_file_storage.dto.UserRequestDto;
 import com.vladsv.cloud_file_storage.dto.UserResponseDto;
 import com.vladsv.cloud_file_storage.entity.User;
-import com.vladsv.cloud_file_storage.repository.UserRepository;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
 @Mapper
@@ -13,9 +11,8 @@ public interface UserMapper {
 
     UserMapper INSTANCE = Mappers.getMapper( UserMapper.class ); 
 
-    User userRequestDtoToUser(UserRequestDto userRequestDto);
+    User toEntity(UserRequestDto userRequestDto);
 
-    UserResponseDto userToUserResponseDto(User user);
-
+    UserResponseDto toDto(User user);
 
 }

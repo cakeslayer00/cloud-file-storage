@@ -16,9 +16,9 @@ public class AuthService {
 
     public UserResponseDto addUser(UserRequestDto userRequestDto) {
         User user = userRepository
-                .saveAndFlush(UserMapper.INSTANCE.userRequestDtoToUser(userRequestDto));
+                .saveAndFlush(UserMapper.INSTANCE.toEntity(userRequestDto));
 
-        return UserMapper.INSTANCE.userToUserResponseDto(user);
+        return UserMapper.INSTANCE.toDto(user);
     }
 
 }
