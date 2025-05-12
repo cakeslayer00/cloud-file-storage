@@ -11,3 +11,5 @@ spring:
       ddl-auto: none
   application:
     name: cloud-file-storage
+  mvc:
+    log-resolved-exception: false

@@ -1,0 +1,41 @@
+package com.vladsv.cloud_file_storage.advice;
+
+import com.vladsv.cloud_file_storage.dto.ErrorResponseDto;
+import com.vladsv.cloud_file_storage.dto.MultipleErrorResponseDto;
+import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public MultipleErrorResponseDto handleNonValidInput(MethodArgumentNotValidException e) {
+        return new MultipleErrorResponseDto(e.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .toList());
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ErrorResponseDto handleUserAlreadyExists(UserAlreadyExistsException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ErrorResponseDto handleUserDoesNotExistsException(UsernameNotFoundException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(Exception.class)
+    public ErrorResponseDto handleUnknownException(Exception e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+}

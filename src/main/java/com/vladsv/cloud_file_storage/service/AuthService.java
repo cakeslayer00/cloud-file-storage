@@ -3,6 +3,7 @@ package com.vladsv.cloud_file_storage.service;
 import com.vladsv.cloud_file_storage.dto.UserRequestDto;
 import com.vladsv.cloud_file_storage.dto.UserResponseDto;
 import com.vladsv.cloud_file_storage.entity.User;
+import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
 import com.vladsv.cloud_file_storage.mapper.UserMapper;
 import com.vladsv.cloud_file_storage.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +15,18 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final String USER_ALREADY_EXISTS = "Username '%s' already exists";
+    private static final String USERNAME_NOT_FOUND = "Username not found";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UserResponseDto addUser(UserRequestDto userRequestDto) {
+        if (userRepository.existsByUsername(userRequestDto.username())) {
+            String message = String.format(USER_ALREADY_EXISTS, userRequestDto.username());
+            throw new UserAlreadyExistsException(message);
+        }
+
         User user = UserMapper.INSTANCE.toEntity(userRequestDto);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
@@ -28,7 +37,7 @@ public class AuthService {
 
     public UserResponseDto authenticate(UserRequestDto userRequestDto) {
         User user = userRepository.findByUsername(userRequestDto.username())
-                .orElseThrow(() -> new UsernameNotFoundException(userRequestDto.username()));
+                .orElseThrow(() -> new UsernameNotFoundException(USERNAME_NOT_FOUND));
 
         return UserMapper.INSTANCE.toDto(user);
     }
