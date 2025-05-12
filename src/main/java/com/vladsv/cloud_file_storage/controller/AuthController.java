@@ -21,4 +21,10 @@ public class AuthController {
         return authService.addUser(userRequestDto);
     }
 
+    @PostMapping("/sign-in")
+    @ResponseStatus(HttpStatus.OK)
+    public UserResponseDto signIn(@RequestBody @Valid UserRequestDto userRequestDto) {
+        return authService.authenticate(userRequestDto);
+    }
+
 }
