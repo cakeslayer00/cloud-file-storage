@@ -13,3 +13,6 @@ services:
           size: 134217728
     ports:
       - "5432:5432"
+  minio:
+    image: minio/minio:latest
+
