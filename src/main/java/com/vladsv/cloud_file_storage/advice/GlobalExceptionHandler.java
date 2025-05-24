@@ -4,6 +4,7 @@ import com.vladsv.cloud_file_storage.dto.ErrorResponseDto;
 import com.vladsv.cloud_file_storage.dto.MultipleErrorResponseDto;
 import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -36,6 +37,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ExceptionHandler(Exception.class)
     public ErrorResponseDto handleUnknownException(Exception e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(BadCredentialsException.class)
+    public ErrorResponseDto handleBadCredentials(BadCredentialsException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 }

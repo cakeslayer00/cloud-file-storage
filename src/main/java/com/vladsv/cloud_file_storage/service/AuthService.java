@@ -7,6 +7,7 @@ import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
 import com.vladsv.cloud_file_storage.mapper.UserMapper;
 import com.vladsv.cloud_file_storage.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,10 @@ public class AuthService {
     public UserResponseDto authenticate(UserRequestDto userRequestDto) {
         User user = userRepository.findByUsername(userRequestDto.username())
                 .orElseThrow(() -> new UsernameNotFoundException(USERNAME_NOT_FOUND));
+
+        if (!passwordEncoder.matches(userRequestDto.password(), user.getPassword())) {
+            throw new BadCredentialsException("Incorrect password or username");
+        }
 
         return UserMapper.INSTANCE.toDto(user);
     }
