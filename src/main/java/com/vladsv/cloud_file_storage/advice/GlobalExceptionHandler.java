@@ -6,6 +6,7 @@ import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -17,8 +18,10 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public MultipleErrorResponseDto handleNonValidInput(MethodArgumentNotValidException e) {
-        return new MultipleErrorResponseDto(e.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+        return new MultipleErrorResponseDto(e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(this::mapToMessage)
                 .toList());
     }
 
@@ -44,5 +47,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ErrorResponseDto handleBadCredentials(BadCredentialsException e) {
         return new ErrorResponseDto(e.getMessage());
+    }
+
+    private String mapToMessage(FieldError error) {
+        return error.getField() + ": " + error.getDefaultMessage();
     }
 }
