@@ -2,8 +2,10 @@ package com.vladsv.cloud_file_storage.advice;
 
 import com.vladsv.cloud_file_storage.dto.ErrorResponseDto;
 import com.vladsv.cloud_file_storage.dto.MultipleErrorResponseDto;
+import com.vladsv.cloud_file_storage.exception.FolderAlreadyExistsException;
 import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
@@ -46,6 +48,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ExceptionHandler(BadCredentialsException.class)
     public ErrorResponseDto handleBadCredentials(BadCredentialsException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(FolderAlreadyExistsException.class)
+    public ErrorResponseDto handleFolderAlreadyExists(FolderAlreadyExistsException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 
