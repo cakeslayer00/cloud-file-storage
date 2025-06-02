@@ -13,11 +13,15 @@ public class DirectoryController {
 
     private final MinioRepository minioRepository;
 
+    @GetMapping
+    public ResourceResponseDto getDirectoryContentInfo() {
+        return null;
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResourceResponseDto createEmptyDirectory(@RequestParam("path") String path) {
         minioRepository.createEmptyFolder(path);
-
 
         return new ResourceResponseDto("sex", "drugs", 0, "robots");
     }

@@ -20,9 +20,7 @@ public class ResourceController {
     public ResourceResponseDto getResource(@RequestParam("path") String path) {
         StatObjectResponse object = minioRepository.getObject(path);
 
-        ResourceResponseDto resource = MinioObjectMapper.INSTANCE.toDto(object);
-
-        return resource;
+        return MinioObjectMapper.INSTANCE.toResourceDto(object);
     }
 
 }

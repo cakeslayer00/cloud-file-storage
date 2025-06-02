@@ -7,19 +7,12 @@ import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
 import com.vladsv.cloud_file_storage.mapper.UserMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
 import com.vladsv.cloud_file_storage.repository.UserRepository;
-import io.minio.PutObjectArgs;
-import io.minio.errors.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 
 @Service
 @RequiredArgsConstructor
