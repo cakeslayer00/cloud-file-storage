@@ -2,7 +2,6 @@ package com.vladsv.cloud_file_storage.mapper;
 
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
 import io.minio.StatObjectResponse;
-import org.jetbrains.annotations.NotNull;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

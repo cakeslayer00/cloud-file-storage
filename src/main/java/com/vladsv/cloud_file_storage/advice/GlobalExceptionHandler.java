@@ -2,7 +2,9 @@ package com.vladsv.cloud_file_storage.advice;
 
 import com.vladsv.cloud_file_storage.dto.ErrorResponseDto;
 import com.vladsv.cloud_file_storage.dto.MultipleErrorResponseDto;
+import com.vladsv.cloud_file_storage.exception.DirectoryDoesNotExistException;
 import com.vladsv.cloud_file_storage.exception.FolderAlreadyExistsException;
+import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistException;
 import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -54,6 +56,18 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     @ExceptionHandler(FolderAlreadyExistsException.class)
     public ErrorResponseDto handleFolderAlreadyExists(FolderAlreadyExistsException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(ResourceDoesNotExistException.class)
+    public ErrorResponseDto handleResourceDoesNotExist(ResourceDoesNotExistException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(DirectoryDoesNotExistException.class)
+    public ErrorResponseDto handleDirectoryDoesNotExist(DirectoryDoesNotExistException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 

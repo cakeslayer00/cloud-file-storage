@@ -17,5 +17,5 @@ spring:
 minio:
   endpoint: http://127.0.0.1:9000 #MINIO_ENDPOINT
   credentials:
-    access_key: K81UxdzN93zfAyCbkCPd #MINIO_ACCESS_KEY
-    secret_key: 263hoaaEkTkK49ZkrWRs9gVVdQS2o1hF0y7M8zRi #MINIO_SECRET_KEY
+    access_key: ZzVmhkygFeoYZUTxv9N0 #MINIO_ACCESS_KEY
+    secret_key: cULmm79pPaEqGb0nvdoXYvOYoRCImcMkW8ArBTdR #MINIO_SECRET_KEY

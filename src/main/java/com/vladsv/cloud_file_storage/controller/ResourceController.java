@@ -3,7 +3,9 @@ package com.vladsv.cloud_file_storage.controller;
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
 import com.vladsv.cloud_file_storage.mapper.MinioObjectMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
+import com.vladsv.cloud_file_storage.service.MinioService;
 import io.minio.StatObjectResponse;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -14,13 +16,26 @@ import org.springframework.web.bind.annotation.*;
 public class ResourceController {
 
     private final MinioRepository minioRepository;
+    private final MinioService minioService;
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     public ResourceResponseDto getResource(@RequestParam("path") String path) {
-        StatObjectResponse object = minioRepository.getObject(path);
+        StatObjectResponse object = minioRepository.getResourceStat(path);
 
         return MinioObjectMapper.INSTANCE.toResourceDto(object);
+    }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteResource(@RequestParam("path") String path) {
+        minioRepository.delete(path);
+    }
+
+    @GetMapping("/download")
+    @ResponseStatus(HttpStatus.OK)
+    public void downloadResource(@RequestParam("path") String path, HttpServletResponse response) {
+        minioService.downloadResource(path, response);
     }
 
 }
