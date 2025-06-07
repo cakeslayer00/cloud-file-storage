@@ -28,7 +28,7 @@ public class AuthService {
 
     private final MinioRepository minioRepository;
 
-    public UserResponseDto addUser(UserRequestDto userRequestDto) {
+    public UserResponseDto register(UserRequestDto userRequestDto) {
         if (userRepository.existsByUsername(userRequestDto.username())) {
             String message = String.format(USER_ALREADY_EXISTS, userRequestDto.username());
             throw new UserAlreadyExistsException(message);

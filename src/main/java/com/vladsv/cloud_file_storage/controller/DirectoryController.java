@@ -16,11 +16,6 @@ public class DirectoryController {
 
     private final MinioRepository minioRepository;
 
-    @GetMapping
-    public ResourceResponseDto getDirectoryContentInfo() {
-        return null;
-    }
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DirectoryResponseDto createEmptyDirectory(@RequestParam("path") String path) {

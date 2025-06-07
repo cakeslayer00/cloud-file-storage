@@ -30,7 +30,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService.addUser(new UserRequestDto("cakeslayer", "password"));
+        authService.register(new UserRequestDto("cakeslayer", "password"));
     }
 
     @Test
