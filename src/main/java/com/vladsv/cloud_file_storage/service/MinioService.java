@@ -1,6 +1,7 @@
 package com.vladsv.cloud_file_storage.service;
 
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
+import io.minio.StatObjectResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,9 +20,6 @@ public class MinioService {
     private final MinioRepository minioRepository;
 
     public void downloadResource(String path, HttpServletResponse response) {
-        response.setContentType("application/octet-stream");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + path + "\"");
-
         if (!minioRepository.isDirectory(path)) {
             try (InputStream stream = minioRepository.getResource(path)) {
                 StreamUtils.copy(stream, response.getOutputStream());
@@ -31,16 +29,24 @@ public class MinioService {
         } else {
             zipDirectoryContent(path, response);
         }
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + path + "\"");
     }
 
-    //TODO: Da hellь is goin on? ()-()
+    public StatObjectResponse manipulateResource(String from, String to) {
+        minioRepository.copyResource(from, to);
+        minioRepository.delete(from);
+        return minioRepository.getResourceStat(to);
+    }
+
     private void zipDirectoryContent(String path, HttpServletResponse response) {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
-            List<String> resources = minioRepository.getAllResourcesFromDirectory(path);
+            List<String> resources = minioRepository.getAllResourceNames(path);
 
             resources.forEach(resource -> {
                 try (InputStream in = minioRepository.getResource(resource)) {
-                    ZipEntry zipEntry = new ZipEntry(resource.substring(path.length()));
+                    String substring = resource.substring(path.length());
+                    ZipEntry zipEntry = new ZipEntry(substring);
                     zipOutputStream.putNextEntry(zipEntry);
                     in.transferTo(zipOutputStream);
                     zipOutputStream.closeEntry();

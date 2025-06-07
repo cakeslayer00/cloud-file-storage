@@ -1,8 +1,9 @@
 package com.vladsv.cloud_file_storage.repository;
 
-import com.vladsv.cloud_file_storage.exception.DirectoryDoesNotExistException;
-import com.vladsv.cloud_file_storage.exception.FolderAlreadyExistsException;
-import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistException;
+import com.vladsv.cloud_file_storage.exception.DirectoryDoesNotExistsException;
+import com.vladsv.cloud_file_storage.exception.DirectoryAlreadyExistsException;
+import com.vladsv.cloud_file_storage.exception.ResourceAlreadyExistsException;
+import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
 import io.minio.*;
 import io.minio.errors.*;
 import io.minio.messages.Item;
@@ -21,22 +22,26 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MinioRepository {
 
-    private static final String DIRECTORY_DOES_NOT_EXIST = "Directory under path '%s' doesn't exist or not valid";
-    private static final String RESOURCE_DOES_NOT_EXIST = "Resource under path '%s' does not exist";
-    private static final String FOLDER_WITH_THIS_PATH_ALREADY_EXISTS = "Folder under path %s already exists";
+    private static final String DIRECTORY_DOES_NOT_EXISTS = "Directory under path '%s' does not exist or not valid";
+    private static final String RESOURCE_DOES_NOT_EXISTS = "Resource under path '%s' does not exist or not valid";
+    private static final String DIRECTORY_ALREADY_EXISTS = "Directory under path '%s' already exists";
+    private static final String RESOURCE_ALREADY_EXISTS = "Resource under path '%s' already exists";
+
     private static final String COMMON_BUCKET = "user-files";
 
     private final MinioClient minioClient;
 
     public void createEmptyFolder(String path) {
         try {
-            if (isObjectExist(path)) {
-                throw new FolderAlreadyExistsException(
-                        String.format(FOLDER_WITH_THIS_PATH_ALREADY_EXISTS, path));
+            path = path.endsWith("/") ? path : path + "/";
+
+            if (isDirectoryExists(path)) {
+                throw new DirectoryAlreadyExistsException(
+                        String.format(DIRECTORY_ALREADY_EXISTS, path));
             }
 
             minioClient.putObject(
-                    PutObjectArgs.builder().bucket(COMMON_BUCKET).object(path).stream(
+                    PutObjectArgs.builder().bucket(COMMON_BUCKET).object(path + ".init").stream(
                                     new ByteArrayInputStream(new byte[]{}), 0, -1)
                             .build());
         } catch (ErrorResponseException | InvalidKeyException | InvalidResponseException |
@@ -46,7 +51,7 @@ public class MinioRepository {
         }
     }
 
-    public List<String> getAllResourcesFromDirectory(String path) {
+    public List<String> getAllResourceNames(String path) {
         try {
             List<String> res = new ArrayList<>();
             Iterable<Result<Item>> resources = minioClient.listObjects(
@@ -68,11 +73,11 @@ public class MinioRepository {
     public InputStream getResource(String path) {
         try {
             if (!isDirectoryExists(path)) {
-                throw new DirectoryDoesNotExistException(String.format(DIRECTORY_DOES_NOT_EXIST, path));
+                throw new DirectoryDoesNotExistsException(String.format(DIRECTORY_DOES_NOT_EXISTS, path));
             }
 
-            if (!isObjectExist(path)) {
-                path = path + ".init";
+            if (!isObjectExists(path)) {
+                throw new ResourceDoesNotExistsException(String.format(RESOURCE_DOES_NOT_EXISTS, path));
             }
 
             return minioClient.getObject(
@@ -90,11 +95,11 @@ public class MinioRepository {
     public StatObjectResponse getResourceStat(String path) {
         try {
             if (!isDirectoryExists(path)) {
-                throw new DirectoryDoesNotExistException(String.format(DIRECTORY_DOES_NOT_EXIST, path));
+                throw new DirectoryDoesNotExistsException(String.format(DIRECTORY_DOES_NOT_EXISTS, path));
             }
 
-            if (!isObjectExist(path)) {
-                throw new ResourceDoesNotExistException(String.format(RESOURCE_DOES_NOT_EXIST, path));
+            if (!isObjectExists(path)) {
+                throw new ResourceDoesNotExistsException(String.format(RESOURCE_DOES_NOT_EXISTS, path));
             }
 
             return minioClient.statObject(StatObjectArgs.builder()
@@ -107,14 +112,49 @@ public class MinioRepository {
         }
     }
 
+    public void copyResource(String source, String target) {
+        try {
+            if (!isDirectoryExists(source)) {
+                throw new DirectoryDoesNotExistsException(String.format(DIRECTORY_DOES_NOT_EXISTS, source));
+            }
+
+            if (!isObjectExists(source)) {
+                throw new ResourceDoesNotExistsException(String.format(RESOURCE_DOES_NOT_EXISTS, source));
+            }
+
+            if (!isDirectoryExists(target)) {
+                throw new DirectoryDoesNotExistsException(String.format(DIRECTORY_DOES_NOT_EXISTS, target));
+            }
+
+            if (isObjectExists(target)) {
+                throw new ResourceAlreadyExistsException(String.format(RESOURCE_ALREADY_EXISTS, target));
+            }
+
+            minioClient.copyObject(
+                    CopyObjectArgs.builder()
+                            .bucket(COMMON_BUCKET)
+                            .object(target)
+                            .source(
+                                    CopySource.builder()
+                                            .bucket(COMMON_BUCKET)
+                                            .object(source)
+                                            .build())
+                            .build());
+        } catch (ErrorResponseException | InvalidKeyException | InvalidResponseException |
+                 IOException | NoSuchAlgorithmException | ServerException |
+                 XmlParserException | InternalException | InsufficientDataException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public void delete(String path) {
         try {
             if (!isDirectoryExists(path)) {
-                throw new DirectoryDoesNotExistException(String.format(DIRECTORY_DOES_NOT_EXIST, path));
+                throw new DirectoryDoesNotExistsException(String.format(DIRECTORY_DOES_NOT_EXISTS, path));
             }
 
-            if (!isObjectExist(path)) {
-                throw new ResourceDoesNotExistException(String.format(RESOURCE_DOES_NOT_EXIST, path));
+            if (!isObjectExists(path)) {
+                throw new ResourceDoesNotExistsException(String.format(RESOURCE_DOES_NOT_EXISTS, path));
             }
 
             minioClient.removeObject(RemoveObjectArgs.builder().bucket(COMMON_BUCKET).object(path).build());
@@ -130,10 +170,11 @@ public class MinioRepository {
     }
 
     private boolean isDirectoryExists(String path) {
-        return isObjectExist(getPathResourceExcluded(path) + ".init");
+        String pathWithResourceNameExcluded = getPathWithResourceNameExcluded(path);
+        return isObjectExists(pathWithResourceNameExcluded + ".init");
     }
 
-    private boolean isObjectExist(String name) {
+    private boolean isObjectExists(String name) {
         try {
             minioClient.statObject(StatObjectArgs.builder()
                     .bucket(COMMON_BUCKET)
@@ -146,7 +187,7 @@ public class MinioRepository {
         }
     }
 
-    private String getPathResourceExcluded(String payloadPath) {
+    private String getPathWithResourceNameExcluded(String payloadPath) {
         int index = payloadPath.lastIndexOf("/");
         return payloadPath.substring(0, index + 1);
     }

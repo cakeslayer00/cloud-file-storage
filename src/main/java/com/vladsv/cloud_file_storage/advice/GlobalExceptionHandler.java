@@ -2,12 +2,8 @@ package com.vladsv.cloud_file_storage.advice;
 
 import com.vladsv.cloud_file_storage.dto.ErrorResponseDto;
 import com.vladsv.cloud_file_storage.dto.MultipleErrorResponseDto;
-import com.vladsv.cloud_file_storage.exception.DirectoryDoesNotExistException;
-import com.vladsv.cloud_file_storage.exception.FolderAlreadyExistsException;
-import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistException;
-import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
+import com.vladsv.cloud_file_storage.exception.*;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
@@ -41,33 +37,39 @@ public class GlobalExceptionHandler {
         return new ErrorResponseDto(e.getMessage());
     }
 
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    @ExceptionHandler(Exception.class)
-    public ErrorResponseDto handleUnknownException(Exception e) {
-        return new ErrorResponseDto(e.getMessage());
-    }
-
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     @ExceptionHandler(BadCredentialsException.class)
     public ErrorResponseDto handleBadCredentials(BadCredentialsException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(Exception.class)
+    public ErrorResponseDto handleUnknownException(Exception e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
     @ResponseStatus(HttpStatus.CONFLICT)
-    @ExceptionHandler(FolderAlreadyExistsException.class)
-    public ErrorResponseDto handleFolderAlreadyExists(FolderAlreadyExistsException e) {
+    @ExceptionHandler(DirectoryAlreadyExistsException.class)
+    public ErrorResponseDto handleFolderAlreadyExists(DirectoryAlreadyExistsException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ExceptionHandler(ResourceDoesNotExistException.class)
-    public ErrorResponseDto handleResourceDoesNotExist(ResourceDoesNotExistException e) {
+    @ExceptionHandler(ResourceDoesNotExistsException.class)
+    public ErrorResponseDto handleResourceDoesNotExists(ResourceDoesNotExistsException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(DirectoryDoesNotExistException.class)
-    public ErrorResponseDto handleDirectoryDoesNotExist(DirectoryDoesNotExistException e) {
+    @ExceptionHandler(DirectoryDoesNotExistsException.class)
+    public ErrorResponseDto handleDirectoryDoesNotExists(DirectoryDoesNotExistsException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(ResourceAlreadyExistsException.class)
+    public ErrorResponseDto handleResourceAlreadyExists(ResourceAlreadyExistsException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 
