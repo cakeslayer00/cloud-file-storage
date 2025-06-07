@@ -1,7 +1,7 @@
 package com.vladsv.cloud_file_storage.repository;
 
-import com.vladsv.cloud_file_storage.exception.DirectoryDoesNotExistsException;
 import com.vladsv.cloud_file_storage.exception.DirectoryAlreadyExistsException;
+import com.vladsv.cloud_file_storage.exception.DirectoryDoesNotExistsException;
 import com.vladsv.cloud_file_storage.exception.ResourceAlreadyExistsException;
 import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
 import io.minio.*;
@@ -31,7 +31,7 @@ public class MinioRepository {
 
     private final MinioClient minioClient;
 
-    public void createEmptyFolder(String path) {
+    public GenericResponse commenceDirectory(String path) {
         try {
             path = path.endsWith("/") ? path : path + "/";
 
@@ -40,10 +40,11 @@ public class MinioRepository {
                         String.format(DIRECTORY_ALREADY_EXISTS, path));
             }
 
-            minioClient.putObject(
+            return minioClient.putObject(
                     PutObjectArgs.builder().bucket(COMMON_BUCKET).object(path + ".init").stream(
                                     new ByteArrayInputStream(new byte[]{}), 0, -1)
                             .build());
+
         } catch (ErrorResponseException | InvalidKeyException | InvalidResponseException |
                  IOException | NoSuchAlgorithmException | ServerException |
                  XmlParserException | InternalException | InsufficientDataException e) {
@@ -51,7 +52,7 @@ public class MinioRepository {
         }
     }
 
-    public List<String> getAllResourceNames(String path) {
+    public List<String> getAllByPrefix(String path) {
         try {
             List<String> res = new ArrayList<>();
             Iterable<Result<Item>> resources = minioClient.listObjects(
@@ -68,6 +69,17 @@ public class MinioRepository {
                  XmlParserException | InternalException | InsufficientDataException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public List<String> getDirectoriesByPrefix(String path) {
+        path = path.endsWith("/") ? path : path + "/";
+
+        if (!isDirectoryExists(path)) {
+            throw new DirectoryDoesNotExistsException(
+                    String.format(DIRECTORY_DOES_NOT_EXISTS, path));
+        }
+
+        return getAllByPrefix(path);
     }
 
     public InputStream getResource(String path) {
@@ -170,8 +182,7 @@ public class MinioRepository {
     }
 
     private boolean isDirectoryExists(String path) {
-        String pathWithResourceNameExcluded = getPathWithResourceNameExcluded(path);
-        return isObjectExists(pathWithResourceNameExcluded + ".init");
+        return isObjectExists(getPathWithResourceNameExcluded(path) + ".init");
     }
 
     private boolean isObjectExists(String name) {

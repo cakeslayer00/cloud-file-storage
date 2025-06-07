@@ -1,5 +1,7 @@
 package com.vladsv.cloud_file_storage.service;
 
+import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
+import com.vladsv.cloud_file_storage.mapper.MinioObjectMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
 import io.minio.StatObjectResponse;
 import jakarta.servlet.http.HttpServletResponse;
@@ -9,6 +11,7 @@ import org.springframework.util.StreamUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -33,7 +36,18 @@ public class MinioService {
         response.setHeader("Content-Disposition", "attachment; filename=\"" + path + "\"");
     }
 
-    public StatObjectResponse manipulateResource(String from, String to) {
+    //TODO: refine
+    public List<ResourceResponseDto> searchByQuery(String query) {
+        List<String> resources = minioRepository.getAllByPrefix(query);
+        List<ResourceResponseDto> res = new ArrayList<>();;
+        for (String resource : resources) {
+            StatObjectResponse resourceStat = minioRepository.getResourceStat(resource);
+            res.add(MinioObjectMapper.INSTANCE.toResourceDto(resourceStat));
+        }
+        return res;
+    }
+
+    public StatObjectResponse moveResource(String from, String to) {
         minioRepository.copyResource(from, to);
         minioRepository.delete(from);
         return minioRepository.getResourceStat(to);
@@ -41,7 +55,7 @@ public class MinioService {
 
     private void zipDirectoryContent(String path, HttpServletResponse response) {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
-            List<String> resources = minioRepository.getAllResourceNames(path);
+            List<String> resources = minioRepository.getDirectoriesByPrefix(path);
 
             resources.forEach(resource -> {
                 try (InputStream in = minioRepository.getResource(resource)) {
