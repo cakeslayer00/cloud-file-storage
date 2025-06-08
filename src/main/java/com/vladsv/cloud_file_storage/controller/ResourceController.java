@@ -1,6 +1,7 @@
 package com.vladsv.cloud_file_storage.controller;
 
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
+import com.vladsv.cloud_file_storage.entity.User;
 import com.vladsv.cloud_file_storage.mapper.MinioObjectMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
 import com.vladsv.cloud_file_storage.service.MinioService;
@@ -8,7 +9,9 @@ import io.minio.StatObjectResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import utils.PathUtils;
 
 import java.util.List;
 
@@ -22,8 +25,11 @@ public class ResourceController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    public ResourceResponseDto get(@RequestParam("path") String path) {
-        StatObjectResponse object = minioRepository.getResourceStat(path);
+    public ResourceResponseDto get(@RequestParam("path") String path, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+
+        StatObjectResponse object =
+                minioRepository.getResourceStat(PathUtils.applyUserRootDirectoryPrefix(path, user.getId()));
 
         return MinioObjectMapper.INSTANCE.toResourceDto(object);
     }
@@ -34,18 +40,6 @@ public class ResourceController {
         StatObjectResponse object = minioService.moveResource(from, to);
 
         return MinioObjectMapper.INSTANCE.toResourceDto(object);
-    }
-
-    @GetMapping("/search")
-    @ResponseStatus(HttpStatus.OK)
-    public List<ResourceResponseDto> search(@RequestParam("query") String query) {
-        return minioService.searchByQuery(query);
-    }
-
-    @GetMapping("/download")
-    @ResponseStatus(HttpStatus.OK)
-    public void download(@RequestParam("path") String path, HttpServletResponse response) {
-        minioService.downloadResource(path, response);
     }
 
     @DeleteMapping

@@ -61,7 +61,7 @@ public class GlobalExceptionHandler {
         return new ErrorResponseDto(e.getMessage());
     }
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(DirectoryDoesNotExistsException.class)
     public ErrorResponseDto handleDirectoryDoesNotExists(DirectoryDoesNotExistsException e) {
         return new ErrorResponseDto(e.getMessage());
@@ -70,6 +70,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     @ExceptionHandler(ResourceAlreadyExistsException.class)
     public ErrorResponseDto handleResourceAlreadyExists(ResourceAlreadyExistsException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(AmbiguousPathException.class)
+    public ErrorResponseDto handleAmbiguousPathException(AmbiguousPathException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 

@@ -18,20 +18,18 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final String USER_ALREADY_EXISTS = "Username '%s' already exists";
-    private static final String USERNAME_NOT_FOUND = "Username not found";
-    private static final String USER_FOLDER_FORMAT = "user-%s-files/.init";
+    private static final String USER_ALREADY_EXISTS = "Username taken! Choose a different username";
+    private static final String USER_NOT_FOUND = "Username not found";
+    private static final String INVALID_PASSWORD = "Invalid password, try again!";
+    private static final String USER_ROOT_DIRECTORY_FORMAT = "user-%s-files";
 
     private final UserRepository userRepository;
-
     private final PasswordEncoder passwordEncoder;
-
     private final MinioRepository minioRepository;
 
     public UserResponseDto register(UserRequestDto userRequestDto) {
         if (userRepository.existsByUsername(userRequestDto.username())) {
-            String message = String.format(USER_ALREADY_EXISTS, userRequestDto.username());
-            throw new UserAlreadyExistsException(message);
+            throw new UserAlreadyExistsException(USER_ALREADY_EXISTS);
         }
 
         User user = UserMapper.INSTANCE.toEntity(userRequestDto);
@@ -40,7 +38,7 @@ public class AuthService {
         userRepository.saveAndFlush(user);
 
         if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
-            minioRepository.commenceDirectory(String.format(USER_FOLDER_FORMAT, user.getId()));
+            minioRepository.createDirectory(String.format(USER_ROOT_DIRECTORY_FORMAT, user.getId()), user.getId());
         }
 
         return UserMapper.INSTANCE.toDto(user);
@@ -48,10 +46,10 @@ public class AuthService {
 
     public UserResponseDto authenticate(UserRequestDto userRequestDto) {
         User user = userRepository.findByUsername(userRequestDto.username())
-                .orElseThrow(() -> new UsernameNotFoundException(USERNAME_NOT_FOUND));
+                .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND));
 
         if (!passwordEncoder.matches(userRequestDto.password(), user.getPassword())) {
-            throw new BadCredentialsException("Incorrect password or username");
+            throw new BadCredentialsException(INVALID_PASSWORD);
         }
 
         return UserMapper.INSTANCE.toDto(user);
