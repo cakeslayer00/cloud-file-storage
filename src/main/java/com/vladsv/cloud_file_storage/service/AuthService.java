@@ -5,7 +5,6 @@ import com.vladsv.cloud_file_storage.dto.UserResponseDto;
 import com.vladsv.cloud_file_storage.entity.User;
 import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
 import com.vladsv.cloud_file_storage.mapper.UserMapper;
-import com.vladsv.cloud_file_storage.repository.MinioRepository;
 import com.vladsv.cloud_file_storage.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -25,7 +24,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final MinioRepository minioRepository;
+    private final DirectoryService minioRepository;
 
     public UserResponseDto register(UserRequestDto userRequestDto) {
         if (userRepository.existsByUsername(userRequestDto.username())) {
