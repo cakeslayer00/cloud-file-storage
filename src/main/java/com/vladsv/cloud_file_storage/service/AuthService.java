@@ -37,7 +37,7 @@ public class AuthService {
         userRepository.saveAndFlush(user);
 
         if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
-            minioRepository.createDirectory(String.format(USER_ROOT_DIRECTORY_FORMAT, user.getId()), user.getId());
+            minioRepository.createEmptyDirectory(String.format(USER_ROOT_DIRECTORY_FORMAT, user.getId()), user.getId());
         }
 
         return UserMapper.INSTANCE.toDto(user);

@@ -3,8 +3,6 @@ package com.vladsv.cloud_file_storage.service;
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
 import com.vladsv.cloud_file_storage.exception.DirectoryAlreadyExistsException;
 import com.vladsv.cloud_file_storage.exception.DirectoryDoesNotExistsException;
-import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
-import com.vladsv.cloud_file_storage.mapper.MinioResourceMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
 import io.minio.Result;
 import io.minio.errors.*;
@@ -24,7 +22,6 @@ import java.util.List;
 public class DirectoryService {
 
     private static final String DIRECTORY_DOES_NOT_EXISTS = "Directory with given name does not exist";
-    private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with given name does not exist";
     private static final String DIRECTORY_ALREADY_EXISTS = "Directory with given name already exists";
 
     private static final String BUCKET = "user-files";
@@ -33,7 +30,7 @@ public class DirectoryService {
     private final MinioRepository minioRepository;
 
     public List<ResourceResponseDto> getDirResources(String origin, Long userId) {
-        String rootPath = PathUtils.getValidDirectoryPath(origin, userId);
+        String rootPath = PathUtils.getValidRootDirectoryPath(origin, userId);
         String prefix = PathUtils.getUserRootDirectoryPrefix(userId);
         Iterable<Result<Item>> resources = minioRepository.listObjects(BUCKET, rootPath);
 
@@ -46,28 +43,14 @@ public class DirectoryService {
         return res;
     }
 
-    public void createDirectory(String path, Long userId) {
-        String rootPath = PathUtils.getValidDirectoryPath(path, userId);
+    public void createEmptyDirectory(String path, Long userId) {
+        String rootPath = PathUtils.getValidRootDirectoryPath(path, userId);
 
         if (minioRepository.isResourceExists(BUCKET, rootPath)) {
             throw new DirectoryAlreadyExistsException(DIRECTORY_ALREADY_EXISTS);
         }
 
         minioRepository.putEmptyObject(BUCKET, rootPath + DUMMY_FILE);
-    }
-
-    public ResourceResponseDto getResourceStat(String path, Long userId) {
-        path = PathUtils.getValidResourcePath(path, userId);
-
-        if (!minioRepository.isResourceExists(BUCKET, path)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS);
-        }
-
-        if (PathUtils.isDir(path)) {
-            path += DUMMY_FILE;
-        }
-
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(BUCKET, path));
     }
 
     private ResourceResponseDto mapToResourceResponseDto(String userRootDirPrefix, Result<Item> resource) {

@@ -5,17 +5,20 @@ import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class PathUtils {
-
     private static final String AMBIGUOUS_DIRECTORY_PATH_MESSAGE = "Invalid directory path or it's missing";
+
     private static final String USER_ROOT_DIRECTORY_PREFIX = "user-%s-files/";
 
-    public static String getValidDirectoryPath(String path, Long userId) {
+    public static String getValidRootDirectoryPath(String path, Long userId) {
+        return applyUserRootDirectoryPrefix(getValidDirectoryPath(path), userId);
+    }
+
+    public static String getValidDirectoryPath(String path) {
         if (!path.matches("[A-Za-z0-9/]*")) {
             throw new AmbiguousPathException(AMBIGUOUS_DIRECTORY_PATH_MESSAGE);
         }
 
-        path = normalizePath(path);
-        return applyDirectorySuffix(applyUserRootDirectoryPrefix(path, userId));
+        return normalizePath(applyDirectorySuffix(path));
     }
 
     public static String getValidResourcePath(String path, Long userId) {
