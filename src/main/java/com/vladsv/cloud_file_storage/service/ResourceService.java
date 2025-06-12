@@ -1,6 +1,7 @@
 package com.vladsv.cloud_file_storage.service;
 
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
+import com.vladsv.cloud_file_storage.exception.ResourceAlreadyExistsException;
 import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
 import com.vladsv.cloud_file_storage.mapper.MinioResourceMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
@@ -18,7 +19,6 @@ import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -28,24 +28,25 @@ import java.util.zip.ZipOutputStream;
 public class ResourceService {
 
     private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with given name does not exist";
+    private static final String TARGET_RESOURCE_ALREADY_EXISTS = "Resource under target path already exists";
 
     private static final String BUCKET = "user-files";
     private static final String DUMMY_FILE = ".init";
 
     private final MinioRepository minioRepository;
 
-    public ResourceResponseDto getResourceStat(String path, Long userId) {
-        path = PathUtils.getValidResourcePath(path, userId);
+    public ResourceResponseDto getResourceStat(String path, Long id) {
+        path = PathUtils.getValidRootResourcePath(path, id);
 
         if (PathUtils.isDir(path)) {
             path += DUMMY_FILE;
         }
 
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(BUCKET, path), userId);
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(BUCKET, path), id);
     }
 
-    public void downloadResource(String path, Long userId, HttpServletResponse response) {
-        path = PathUtils.getValidResourcePath(path, userId);
+    public void downloadResource(String path, Long id, HttpServletResponse response) {
+        path = PathUtils.getValidRootResourcePath(path, id);
 
         if (!PathUtils.isDir(path)) {
             try (InputStream stream = minioRepository.getObject(BUCKET, path)) {
@@ -62,7 +63,7 @@ public class ResourceService {
     }
 
     public void deleteResource(String path, Long id) {
-        path = PathUtils.getValidResourcePath(path, id);
+        path = PathUtils.getValidRootResourcePath(path, id);
 
         if (!minioRepository.isResourceExists(BUCKET, path)) {
             throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS);
@@ -73,6 +74,19 @@ public class ResourceService {
         } else {
             minioRepository.removeObject(BUCKET, path);
         }
+    }
+
+    //TODO: check out corner cases with Dir -> REsour, non working shit.
+    public void moveOrRenameResource(String source, String target, Long id) {
+        source = PathUtils.getValidRootResourcePath(source, id);
+        target = PathUtils.getValidRootResourcePath(target, id);
+
+        if (source.equals(target)) {
+            throw new ResourceAlreadyExistsException(TARGET_RESOURCE_ALREADY_EXISTS);
+        }
+
+        minioRepository.copyObject(BUCKET, source, target);
+        minioRepository.removeObject(BUCKET, source);
     }
 
     private void zipDirectoryContent(String path, HttpServletResponse response) {
@@ -126,4 +140,5 @@ public class ResourceService {
         });
         return resources;
     }
+
 }

@@ -94,7 +94,13 @@ public class MinioRepository {
                                             .object(source)
                                             .build())
                             .build());
-        } catch (ErrorResponseException | InvalidKeyException | InvalidResponseException |
+        } catch (ErrorResponseException e) {
+            //TODO: not sure whether this right, check out/sdf
+            if (e.getMessage().contains("The specified key does not exist")) {
+                throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS);
+            }
+            throw new RuntimeException(e);
+        } catch (InvalidKeyException | InvalidResponseException |
                  IOException | NoSuchAlgorithmException | ServerException |
                  XmlParserException | InternalException | InsufficientDataException e) {
             throw new RuntimeException(e);

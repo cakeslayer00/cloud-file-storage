@@ -1,10 +1,7 @@
 package utils;
 
 import com.vladsv.cloud_file_storage.exception.InvalidDirectoryPathException;
-import com.vladsv.cloud_file_storage.exception.InvalidResourcePathException;
 import lombok.experimental.UtilityClass;
-
-import java.util.regex.Pattern;
 
 @UtilityClass
 public class PathUtils {
@@ -18,6 +15,10 @@ public class PathUtils {
         return applyUserRootDirectoryPrefix(getValidDirectoryPath(path), userId);
     }
 
+    public static String getValidRootResourcePath(String path, Long userId) {
+        return applyUserRootDirectoryPrefix(normalizePath(path), userId);
+    }
+
     public static String getValidDirectoryPath(String path) {
         if (!path.matches("[A-Za-z0-9/]*")) {
             throw new InvalidDirectoryPathException(INVALID_DIRECTORY_PATH);
@@ -26,8 +27,8 @@ public class PathUtils {
         return normalizePath(applyDirectorySuffix(path));
     }
 
-    public static String getValidResourcePath(String path, Long userId) {
-        return normalizePath(applyUserRootDirectoryPrefix(path, userId));
+    public static String getValidResourcePath(String path) {
+        return normalizePath(path);
     }
 
     public static String normalizePath(String path) {
