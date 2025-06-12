@@ -1,11 +1,16 @@
 package utils;
 
-import com.vladsv.cloud_file_storage.exception.AmbiguousPathException;
+import com.vladsv.cloud_file_storage.exception.InvalidDirectoryPathException;
+import com.vladsv.cloud_file_storage.exception.InvalidResourcePathException;
 import lombok.experimental.UtilityClass;
+
+import java.util.regex.Pattern;
 
 @UtilityClass
 public class PathUtils {
-    private static final String AMBIGUOUS_DIRECTORY_PATH_MESSAGE = "Invalid directory path or it's missing";
+
+    private static final String INVALID_DIRECTORY_PATH = "Invalid directory path or it's missing";
+    private static final String INVALID_RESOURCE_PATH = "Invalid resource path or its missing";
 
     private static final String USER_ROOT_DIRECTORY_PREFIX = "user-%s-files/";
 
@@ -15,7 +20,7 @@ public class PathUtils {
 
     public static String getValidDirectoryPath(String path) {
         if (!path.matches("[A-Za-z0-9/]*")) {
-            throw new AmbiguousPathException(AMBIGUOUS_DIRECTORY_PATH_MESSAGE);
+            throw new InvalidDirectoryPathException(INVALID_DIRECTORY_PATH);
         }
 
         return normalizePath(applyDirectorySuffix(path));

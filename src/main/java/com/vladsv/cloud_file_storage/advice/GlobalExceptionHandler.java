@@ -74,8 +74,14 @@ public class GlobalExceptionHandler {
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(AmbiguousPathException.class)
-    public ErrorResponseDto handleAmbiguousPathException(AmbiguousPathException e) {
+    @ExceptionHandler(InvalidDirectoryPathException.class)
+    public ErrorResponseDto handleAmbiguousPathException(InvalidDirectoryPathException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(InvalidResourcePathException.class)
+    public ErrorResponseDto handleAmbiguousPathException(InvalidResourcePathException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 
