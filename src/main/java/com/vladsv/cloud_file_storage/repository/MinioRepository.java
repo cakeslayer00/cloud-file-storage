@@ -3,6 +3,8 @@ package com.vladsv.cloud_file_storage.repository;
 import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
 import io.minio.*;
 import io.minio.errors.*;
+import io.minio.messages.DeleteError;
+import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -57,6 +63,11 @@ public class MinioRepository {
                 ListObjectsArgs.builder().bucket(bucket).prefix(path).build());
     }
 
+    public Iterable<Result<Item>> listObjectsRecursive(String bucket, String path) {
+        return minioClient.listObjects(
+                ListObjectsArgs.builder().bucket(bucket).prefix(path).recursive(true).build());
+    }
+
     public void putEmptyObject(String bucket, String path) {
         try {
             minioClient.putObject(PutObjectArgs.builder()
@@ -94,6 +105,26 @@ public class MinioRepository {
         try {
             minioClient.removeObject(
                     RemoveObjectArgs.builder().bucket(bucket).object(path).build());
+        } catch (ErrorResponseException | InsufficientDataException | InternalException |
+                 InvalidKeyException | InvalidResponseException | IOException |
+                 NoSuchAlgorithmException | ServerException | XmlParserException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void removeObjects(String bucket, List<String> objects) {
+        try {
+            List<DeleteObject> deleteObjectList = new LinkedList<>(
+                    objects.stream().map(DeleteObject::new).toList());
+            Iterable<Result<DeleteError>> results =
+                    minioClient.removeObjects(
+                            RemoveObjectsArgs.builder().bucket(bucket).objects(deleteObjectList).build());
+            for (Result<DeleteError> result : results) {
+                DeleteError error = result.get();
+                //TODO: add logging
+                System.out.println(
+                        "Error in deleting object " + error.objectName() + "; " + error.message());
+            }
         } catch (ErrorResponseException | InsufficientDataException | InternalException |
                  InvalidKeyException | InvalidResponseException | IOException |
                  NoSuchAlgorithmException | ServerException | XmlParserException e) {

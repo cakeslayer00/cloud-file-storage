@@ -39,6 +39,7 @@ public class ResourceController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@RequestParam("path") String path,
                        @AuthenticationPrincipal User user) {
+        resourceService.deleteResource(path, user.getId());
     }
 
 }

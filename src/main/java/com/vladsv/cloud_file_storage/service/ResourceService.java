@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -35,10 +36,6 @@ public class ResourceService {
 
     public ResourceResponseDto getResourceStat(String path, Long userId) {
         path = PathUtils.getValidResourcePath(path, userId);
-
-        if (!minioRepository.isResourceExists(BUCKET, path)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS);
-        }
 
         if (PathUtils.isDir(path)) {
             path += DUMMY_FILE;
@@ -64,20 +61,18 @@ public class ResourceService {
         response.setHeader("Content-Disposition", "attachment; filename=\"" + path + "\"");
     }
 
-    private List<String> getDirectoryContent(String path) {
-        Iterable<Result<Item>> results = minioRepository.listObjects(BUCKET, path);
-        List<String> resources = new ArrayList<>();
-        results.forEach(result -> {
-            try {
-                resources.add(result.get().objectName());
-            } catch (ErrorResponseException | InsufficientDataException | InternalException |
-                     InvalidKeyException | InvalidResponseException | IOException |
-                     NoSuchAlgorithmException | ServerException | XmlParserException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        return resources;
+    public void deleteResource(String path, Long id) {
+        path = PathUtils.getValidResourcePath(path, id);
 
+        if (!minioRepository.isResourceExists(BUCKET, path)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS);
+        }
+
+        if (PathUtils.isDir(path)) {
+            minioRepository.removeObjects(BUCKET, getDirectoryContentRecursive(path));
+        } else {
+            minioRepository.removeObject(BUCKET, path);
+        }
     }
 
     private void zipDirectoryContent(String path, HttpServletResponse response) {
@@ -100,5 +95,35 @@ public class ResourceService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private List<String> getDirectoryContentRecursive(String path) {
+        Iterable<Result<Item>> results = minioRepository.listObjectsRecursive(BUCKET, path);
+        List<String> resources = new ArrayList<>();
+        results.forEach(result -> {
+            try {
+                resources.add(result.get().objectName());
+            } catch (ErrorResponseException | InsufficientDataException | InternalException |
+                     InvalidKeyException | InvalidResponseException | IOException |
+                     NoSuchAlgorithmException | ServerException | XmlParserException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return resources;
+    }
+
+    private List<String> getDirectoryContent(String path) {
+        Iterable<Result<Item>> results = minioRepository.listObjects(BUCKET, path);
+        List<String> resources = new ArrayList<>();
+        results.forEach(result -> {
+            try {
+                resources.add(result.get().objectName());
+            } catch (ErrorResponseException | InsufficientDataException | InternalException |
+                     InvalidKeyException | InvalidResponseException | IOException |
+                     NoSuchAlgorithmException | ServerException | XmlParserException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return resources;
     }
 }
