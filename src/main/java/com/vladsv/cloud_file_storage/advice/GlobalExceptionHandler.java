@@ -68,8 +68,8 @@ public class GlobalExceptionHandler {
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)
-    @ExceptionHandler(ResourceAlreadyExistsException.class)
-    public ErrorResponseDto handleResourceAlreadyExists(ResourceAlreadyExistsException e) {
+    @ExceptionHandler(ConflictingResourceException.class)
+    public ErrorResponseDto handleResourceAlreadyExists(ConflictingResourceException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 

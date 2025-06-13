@@ -47,6 +47,14 @@ public class PathUtils {
         return String.format(USER_ROOT_DIRECTORY_PREFIX, userId);
     }
 
+    public static String getDirectoryName(String path) {
+        return getFileName(path.substring(0, path.lastIndexOf("/"))) + "/";
+    }
+
+    public static String getFileName(String file) {
+        return file.substring(file.lastIndexOf("/") + 1);
+    }
+
     public static boolean isDir(String path) {
         return path.endsWith("/");
     }

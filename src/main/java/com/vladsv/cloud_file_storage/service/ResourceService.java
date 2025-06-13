@@ -1,7 +1,9 @@
 package com.vladsv.cloud_file_storage.service;
 
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
-import com.vladsv.cloud_file_storage.exception.ResourceAlreadyExistsException;
+import com.vladsv.cloud_file_storage.exception.ConflictingResourceException;
+import com.vladsv.cloud_file_storage.exception.IncompatibleResourceTransmissionException;
+import com.vladsv.cloud_file_storage.exception.InvalidResourcePathException;
 import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
 import com.vladsv.cloud_file_storage.mapper.MinioResourceMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
@@ -27,8 +29,10 @@ import java.util.zip.ZipOutputStream;
 @RequiredArgsConstructor
 public class ResourceService {
 
+    private static final String DIRECTORY_TO_FILE_TRANSMIT_FORBIDDEN = "Moving directory resource to file resource is forbidden";
+    private static final String SOURCE_TO_EXISTING_TARGET_TRANSIT = "Transit of source path resource to target path results with conflict";
     private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with given name does not exist";
-    private static final String TARGET_RESOURCE_ALREADY_EXISTS = "Resource under target path already exists";
+    private static final String INVALID_OR_MISSING_PATH = "There is no resource under path %s or it's missing";
 
     private static final String BUCKET = "user-files";
     private static final String DUMMY_FILE = ".init";
@@ -76,17 +80,46 @@ public class ResourceService {
         }
     }
 
-    //TODO: check out corner cases with Dir -> REsour, non working shit.
     public void moveOrRenameResource(String source, String target, Long id) {
         source = PathUtils.getValidRootResourcePath(source, id);
         target = PathUtils.getValidRootResourcePath(target, id);
 
-        if (source.equals(target)) {
-            throw new ResourceAlreadyExistsException(TARGET_RESOURCE_ALREADY_EXISTS);
+        if (!minioRepository.isResourceExists(BUCKET, source)) {
+            throw new InvalidResourcePathException(INVALID_OR_MISSING_PATH.formatted(source));
         }
 
+        if (minioRepository.isResourceExists(BUCKET, target)) {
+            throw new ConflictingResourceException(SOURCE_TO_EXISTING_TARGET_TRANSIT);
+        }
+
+        if (PathUtils.isDir(source)) {
+            handleDirectoryMove(source, target);
+        } else {
+            handleFileMove(source, target);
+        }
+    }
+
+    private void handleFileMove(String source, String target) {
+        moveFile(source, PathUtils.isDir(target)
+                ? target + PathUtils.getFileName(source)
+                : target);
+    }
+
+    private void handleDirectoryMove(String source, String target) {
+        if (!PathUtils.isDir(target)) {
+            throw new IncompatibleResourceTransmissionException(DIRECTORY_TO_FILE_TRANSMIT_FORBIDDEN);
+        }
+        moveDirectory(source, target);
+    }
+
+    private void moveFile(String source, String target) {
         minioRepository.copyObject(BUCKET, source, target);
         minioRepository.removeObject(BUCKET, source);
+    }
+
+    private void moveDirectory(String source, String target) {
+        List<String> sourceDirContent = getDirectoryContentRecursive(source);
+        sourceDirContent.forEach(path -> handleFileMove(path, target));
     }
 
     private void zipDirectoryContent(String path, HttpServletResponse response) {
