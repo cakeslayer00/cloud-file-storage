@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RequestMapping("/api/resource")
 @RestController
 @RequiredArgsConstructor
@@ -37,6 +39,12 @@ public class ResourceController {
                      @RequestParam("to") String to,
                      @AuthenticationPrincipal User user) {
         resourceService.moveOrRenameResource(from, to, user.getId());
+    }
+
+    @GetMapping("/search")
+    public List<ResourceResponseDto> search(@RequestParam("query") String query,
+                                            @AuthenticationPrincipal User user) {
+        return resourceService.searchFromPrefix(query, user.getId());
     }
 
 

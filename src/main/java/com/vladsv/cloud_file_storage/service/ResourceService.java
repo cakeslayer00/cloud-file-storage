@@ -36,6 +36,7 @@ public class ResourceService {
 
     private static final String BUCKET = "user-files";
     private static final String DUMMY_FILE = ".init";
+    private static final String ROOT = "";
 
     private final MinioRepository minioRepository;
 
@@ -98,6 +99,36 @@ public class ResourceService {
             handleFileMove(source, target);
         }
     }
+
+    public List<ResourceResponseDto> searchFromPrefix(String query, Long id) {
+        query = PathUtils.getValidRootResourcePath(query, id);
+
+        Iterable<Result<Item>> results = minioRepository.listObjectsRecursive(BUCKET, query);
+        List<ResourceResponseDto> resources = new ArrayList<>();
+        results.forEach(result -> resources.add(MinioResourceMapper.INSTANCE.toResourceDto(result, id)));
+        return resources;
+    }
+
+    public List<ResourceResponseDto> searchFromRoot(String query, Long id) {
+        String userRootPrefix = PathUtils.getUserRootDirectoryPrefix(id);
+
+        Iterable<Result<Item>> results = minioRepository.listObjectsRecursive(BUCKET, ROOT);
+        List<ResourceResponseDto> resources = new ArrayList<>();
+        results.forEach(result -> {
+            try {
+                String substring = result.get().objectName().substring(userRootPrefix.length());
+                if (substring.contains(query)) {
+                    resources.add(MinioResourceMapper.INSTANCE.toResourceDto(result, id));
+                }
+            } catch (ErrorResponseException | InsufficientDataException | InternalException |
+                     InvalidKeyException | InvalidResponseException | IOException |
+                     NoSuchAlgorithmException | ServerException | XmlParserException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        return resources;
+    }
+
 
     private void handleFileMove(String source, String target) {
         moveFile(source, PathUtils.isDir(target)
@@ -173,5 +204,4 @@ public class ResourceService {
         });
         return resources;
     }
-
 }
