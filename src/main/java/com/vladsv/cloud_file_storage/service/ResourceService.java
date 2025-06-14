@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StreamUtils;
+import org.springframework.web.multipart.MultipartFile;
 import utils.PathUtils;
 
 import java.io.IOException;
@@ -37,6 +38,7 @@ public class ResourceService {
     private static final String BUCKET = "user-files";
     private static final String DUMMY_FILE = ".init";
     private static final String ROOT = "";
+    public static final String CONFLICT_RESOURCE_UPLOAD = "Resource with matching name already uploaded";
 
     private final MinioRepository minioRepository;
 
@@ -109,6 +111,21 @@ public class ResourceService {
         return resources;
     }
 
+    public ResourceResponseDto uploadResource(String path, MultipartFile file, Long id) {
+        path = PathUtils.getValidRootResourcePath(path, id) + file.getOriginalFilename();
+
+        if (minioRepository.isResourceExists(BUCKET, path)) {
+            throw new ConflictingResourceException(CONFLICT_RESOURCE_UPLOAD);
+        }
+
+        try {
+            minioRepository.putObject(BUCKET, path, file.getInputStream(), file.getSize());
+            return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(BUCKET, path), id);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public List<ResourceResponseDto> searchFromRoot(String query, Long id) {
         String userRootPrefix = PathUtils.getUserRootDirectoryPrefix(id);
 
@@ -128,7 +145,6 @@ public class ResourceService {
         });
         return resources;
     }
-
 
     private void handleFileMove(String source, String target) {
         moveFile(source, PathUtils.isDir(target)

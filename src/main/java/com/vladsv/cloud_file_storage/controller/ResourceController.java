@@ -6,8 +6,10 @@ import com.vladsv.cloud_file_storage.service.ResourceService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -47,6 +49,13 @@ public class ResourceController {
         return resourceService.searchFromPrefix(query, user.getId());
     }
 
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.OK)
+    public ResourceResponseDto upload(@RequestParam("path") String path,
+                                      @RequestPart("file") MultipartFile file,
+                                      @AuthenticationPrincipal User user) {
+        return resourceService.uploadResource(path, file, user.getId());
+    }
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)

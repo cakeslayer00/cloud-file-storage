@@ -13,6 +13,11 @@ spring:
     name: cloud-file-storage
   mvc:
     log-resolved-exception: false
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
 
 minio:
   endpoint: http://127.0.0.1:9000 #MINIO_ENDPOINT

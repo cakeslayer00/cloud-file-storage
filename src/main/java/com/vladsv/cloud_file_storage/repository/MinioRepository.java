@@ -58,6 +58,19 @@ public class MinioRepository {
         }
     }
 
+    public void putObject(String bucket, String path, InputStream inputStream, long size) {
+        try {
+            minioClient.putObject(
+                    PutObjectArgs.builder().bucket(bucket).object(path).stream(
+                                    inputStream, size, -1)
+                            .build());
+        } catch (ErrorResponseException | InvalidKeyException | InvalidResponseException |
+                 IOException | NoSuchAlgorithmException | ServerException |
+                 XmlParserException | InternalException | InsufficientDataException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public Iterable<Result<Item>> listObjects(String bucket, String path) {
         return minioClient.listObjects(
                 ListObjectsArgs.builder().bucket(bucket).prefix(path).build());
