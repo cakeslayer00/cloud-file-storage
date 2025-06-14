@@ -25,7 +25,22 @@ services:
       - "9000:9000"
       - "9001:9001"
     command: server --console-address ":9001" /data
+  redis:
+    image: redis:alpine
+    container_name: redis
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning --requirepass YOUSUCKASS
+    healthcheck:
+        test: [ "CMD", "redis-cli", "ping" ]
+        interval: 10s
+        timeout: 5s
+        retries: 5
 
 volumes:
   minio-data:
+  redis-data:
 
