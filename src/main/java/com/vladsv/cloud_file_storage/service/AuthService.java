@@ -20,7 +20,7 @@ public class AuthService {
     private static final String USER_ALREADY_EXISTS = "Username taken! Choose a different username";
     private static final String USER_NOT_FOUND = "Username not found";
     private static final String INVALID_PASSWORD = "Invalid password, try again!";
-    private static final String USER_ROOT_DIRECTORY_FORMAT = "user-%s-files";
+    private static final String USER_ROOT_DIRECTORY_FORMAT = "user-%s-files/";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -37,7 +37,7 @@ public class AuthService {
         userRepository.saveAndFlush(user);
 
         if (SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
-            minioRepository.createEmptyDirectory(String.format(USER_ROOT_DIRECTORY_FORMAT, user.getId()), user.getId());
+            minioRepository.createRootDirectory(USER_ROOT_DIRECTORY_FORMAT.formatted(user.getId()));
         }
 
         return UserMapper.INSTANCE.toDto(user);

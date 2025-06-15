@@ -43,8 +43,8 @@ public class DirectoryService {
         return res;
     }
 
-    public void createEmptyDirectory(String path, Long userId) {
-        String rootPath = PathUtils.getValidRootDirectoryPath(path, userId);
+    public void createEmptyDirectory(String path, Long id) {
+        String rootPath = PathUtils.getValidRootDirectoryPath(path, id);
 
         if (minioRepository.isResourceExists(BUCKET, rootPath)) {
             throw new DirectoryAlreadyExistsException(DIRECTORY_ALREADY_EXISTS);
@@ -53,6 +53,14 @@ public class DirectoryService {
         minioRepository.putEmptyObject(BUCKET, rootPath + DUMMY_FILE);
     }
 
+    public void createRootDirectory(String path) {
+        if (minioRepository.isResourceExists(BUCKET, path)) {
+            throw new DirectoryAlreadyExistsException(DIRECTORY_ALREADY_EXISTS);
+        }
+
+        minioRepository.putEmptyObject(BUCKET, path + DUMMY_FILE);
+    }
+    
     private ResourceResponseDto mapToResourceResponseDto(String userRootDirPrefix, Result<Item> resource) {
         try {
             Item item = resource.get();

@@ -34,11 +34,11 @@ public class ResourceService {
     private static final String SOURCE_TO_EXISTING_TARGET_TRANSIT = "Transit of source path resource to target path results with conflict";
     private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with given name does not exist";
     private static final String INVALID_OR_MISSING_PATH = "There is no resource under path %s or it's missing";
+    private static final String CONFLICT_RESOURCE_UPLOAD = "Resource with matching name already uploaded";
 
     private static final String BUCKET = "user-files";
     private static final String DUMMY_FILE = ".init";
     private static final String ROOT = "";
-    public static final String CONFLICT_RESOURCE_UPLOAD = "Resource with matching name already uploaded";
 
     private final MinioRepository minioRepository;
 
