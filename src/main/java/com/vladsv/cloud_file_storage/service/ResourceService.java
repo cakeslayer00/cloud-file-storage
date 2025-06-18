@@ -45,11 +45,7 @@ public class ResourceService {
     public ResourceResponseDto getResourceStat(String path, Long id) {
         path = PathUtils.getValidRootResourcePath(path, id);
 
-        if (PathUtils.isDir(path)) {
-            path += DUMMY_FILE;
-        }
-
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(BUCKET, path), id);
+        return getResourceStatWithValidPath(path, id);
     }
 
     public void downloadResource(String path, Long id, HttpServletResponse response) {
@@ -83,23 +79,21 @@ public class ResourceService {
         }
     }
 
-    public void moveOrRenameResource(String source, String target, Long id) {
+    public ResourceResponseDto moveOrRenameResource(String source, String target, Long id) {
         source = PathUtils.getValidRootResourcePath(source, id);
         target = PathUtils.getValidRootResourcePath(target, id);
+
+        if (source.equals(target)) {
+            throw new ConflictingResourceException(SOURCE_TO_EXISTING_TARGET_TRANSIT);
+        }
 
         if (!minioRepository.isResourceExists(BUCKET, source)) {
             throw new InvalidResourcePathException(INVALID_OR_MISSING_PATH.formatted(source));
         }
 
-        if (minioRepository.isResourceExists(BUCKET, target)) {
-            throw new ConflictingResourceException(SOURCE_TO_EXISTING_TARGET_TRANSIT);
-        }
-
-        if (PathUtils.isDir(source)) {
-            handleDirectoryMove(source, target);
-        } else {
-            handleFileMove(source, target);
-        }
+        return PathUtils.isDir(source)
+                ? handleDirectoryMove(source, target, id)
+                : handleFileMove(source, target, id);
     }
 
     public List<ResourceResponseDto> searchFromPrefix(String query, Long id) {
@@ -146,27 +140,38 @@ public class ResourceService {
         return resources;
     }
 
-    private void handleFileMove(String source, String target) {
-        moveFile(source, PathUtils.isDir(target)
-                ? target + PathUtils.getFileName(source)
-                : target);
+    private ResourceResponseDto getResourceStatWithValidPath(String path, Long id) {
+        if (PathUtils.isDir(path)) {
+            path += DUMMY_FILE;
+        }
+
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(BUCKET, path), id);
     }
 
-    private void handleDirectoryMove(String source, String target) {
+    private ResourceResponseDto handleFileMove(String source, String target, Long id) {
+        if (PathUtils.isDir(target)) {
+            return moveFile(source, target + PathUtils.getFileName(source), id);
+        }
+        return moveFile(source, target, id);
+    }
+
+    private ResourceResponseDto handleDirectoryMove(String source, String target, Long id) {
         if (!PathUtils.isDir(target)) {
             throw new IncompatibleResourceTransmissionException(DIRECTORY_TO_FILE_TRANSMIT_FORBIDDEN);
         }
-        moveDirectory(source, target);
+        return moveDirectory(source, target, id);
     }
 
-    private void moveFile(String source, String target) {
+    private ResourceResponseDto moveFile(String source, String target, Long id) {
         minioRepository.copyObject(BUCKET, source, target);
         minioRepository.removeObject(BUCKET, source);
+        return getResourceStatWithValidPath(target, id);
     }
 
-    private void moveDirectory(String source, String target) {
+    private ResourceResponseDto moveDirectory(String source, String target, Long id) {
         List<String> sourceDirContent = getDirectoryContentRecursive(source);
-        sourceDirContent.forEach(path -> handleFileMove(path, target));
+        sourceDirContent.forEach(path -> handleFileMove(path, target, id));
+        return getResourceStatWithValidPath(target, id);
     }
 
     private void zipDirectoryContent(String path, HttpServletResponse response) {
