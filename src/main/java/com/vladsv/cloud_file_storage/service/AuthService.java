@@ -4,7 +4,7 @@ import com.vladsv.cloud_file_storage.dto.UserRequestDto;
 import com.vladsv.cloud_file_storage.dto.UserResponseDto;
 import com.vladsv.cloud_file_storage.entity.User;
 import com.vladsv.cloud_file_storage.exception.InvalidPasswordException;
-import com.vladsv.cloud_file_storage.exception.UserAlreadyExistsException;
+import com.vladsv.cloud_file_storage.exception.UsernameAlreadyTakenException;
 import com.vladsv.cloud_file_storage.exception.UserNotFoundException;
 import com.vladsv.cloud_file_storage.mapper.UserMapper;
 import com.vladsv.cloud_file_storage.repository.UserRepository;
@@ -24,10 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class AuthService {
 
-    private static final String USER_ALREADY_EXISTS = "Username taken! Choose a different username";
+    private static final String USERNAME_ALREADY_TAKEN = "Username '%s' is already taken";
     private static final String USER_NOT_FOUND = "Username not found, try again!";
     private static final String INVALID_PASSWORD = "Invalid password, try again!";
     private static final String USER_ROOT_DIRECTORY_FORMAT = "user-%s-files/";
@@ -40,11 +39,14 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final DirectoryService minioRepository;
 
+    @Transactional
     public UserResponseDto register(UserRequestDto userRequestDto,
                                     HttpServletRequest request,
                                     HttpServletResponse response) {
-        if (userRepository.existsByUsername(userRequestDto.username())) {
-            throw new UserAlreadyExistsException(USER_ALREADY_EXISTS);
+        boolean isUsernameTaken = userRepository.existsByUsername(userRequestDto.username());
+        if (isUsernameTaken) {
+            throw new UsernameAlreadyTakenException(
+                    USERNAME_ALREADY_TAKEN.formatted(userRequestDto.username()));
         }
 
         User user = UserMapper.INSTANCE.toEntity(userRequestDto);
@@ -78,9 +80,11 @@ public class AuthService {
         UsernamePasswordAuthenticationToken token = UsernamePasswordAuthenticationToken.unauthenticated(
                 userRequestDto.username(), userRequestDto.password());
         Authentication authentication = authenticationManager.authenticate(token);
+
         SecurityContextHolderStrategy securityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
         SecurityContext context = securityContextHolderStrategy.createEmptyContext();
         context.setAuthentication(authentication);
+
         securityContextHolderStrategy.setContext(context);
         securityContextRepository.saveContext(context, request, response);
     }

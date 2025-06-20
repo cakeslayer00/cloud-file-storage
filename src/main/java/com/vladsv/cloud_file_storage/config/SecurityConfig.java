@@ -36,8 +36,9 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())
-                .exceptionHandling(configurer -> configurer.authenticationEntryPoint((request, response, authException)
-                        -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
+                .exceptionHandling(configurer ->
+                        configurer.authenticationEntryPoint((request, response, authException)
+                                -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
                 .sessionManagement((session) -> {
                     session.maximumSessions(1);
                     session.invalidSessionUrl("/api/auth/sign-in");
@@ -56,16 +57,6 @@ public class SecurityConfig {
     }
 
     @Bean
-    public HttpSessionEventPublisher httpSessionEventPublisher() {
-        return new HttpSessionEventPublisher();
-    }
-
-    @Bean
-    public SecurityContextRepository securityContextRepository() {
-        return new HttpSessionSecurityContextRepository();
-    }
-
-    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.addAllowedOrigin("http://localhost:81");
@@ -75,6 +66,16 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    @Bean
+    public HttpSessionEventPublisher httpSessionEventPublisher() {
+        return new HttpSessionEventPublisher();
+    }
+
+    @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
     }
 
     @Bean
