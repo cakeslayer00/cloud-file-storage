@@ -1,6 +1,5 @@
 package com.vladsv.cloud_file_storage.repository;
 
-import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
 import io.minio.*;
 import io.minio.errors.*;
 import io.minio.messages.DeleteError;
@@ -11,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
@@ -21,9 +22,6 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class MinioRepository {
-
-    private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with given name does not exist";
-    private static final String DUMMY_FILE = "/";
 
     private final MinioClient minioClient;
 
@@ -45,13 +43,7 @@ public class MinioRepository {
         try {
             return minioClient.getObject(
                     GetObjectArgs.builder().bucket(bucketName).object(path).build());
-        } catch (ErrorResponseException e) {
-            //TODO: not sure whether this right, check out/sdf
-            if (e.getMessage().contains("The specified key does not exist")) {
-                throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS);
-            }
-            throw new RuntimeException(e);
-        } catch (InsufficientDataException | InternalException |
+        } catch (ErrorResponseException | InsufficientDataException | InternalException |
                  InvalidKeyException | InvalidResponseException | IOException |
                  NoSuchAlgorithmException | ServerException | XmlParserException e) {
             throw new RuntimeException(e);

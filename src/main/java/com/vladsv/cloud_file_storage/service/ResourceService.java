@@ -17,10 +17,8 @@ import utils.PathUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
-import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -71,20 +69,56 @@ public class ResourceService {
     }
 
     public void downloadResource(String path, Long id, HttpServletResponse response) {
-        path = PathUtils.getValidRootResourcePath(path, id);
+        String root = PathUtils.getUserRootDirectoryPattern(id);
+        String normal = PathUtils.normalizePath(path);
 
-        if (!PathUtils.isDir(path)) {
-            try (InputStream stream = minioRepository.getObject(path)) {
-                StreamUtils.copy(stream, response.getOutputStream());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+        if (!minioRepository.isResourceExists(root + normal)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(normal));
+        }
+
+        if (!PathUtils.isDir(normal)) {
+            downloadSingleFile(root + normal, response);
         } else {
-            zipDirectoryContent(path, response);
+            downloadDirectoryAsZip(root, normal, response);
         }
 
         response.setContentType("application/octet-stream");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + path + "\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + normal + "\"");
+    }
+
+    private void downloadSingleFile(String path, HttpServletResponse response) {
+        try (InputStream stream = minioRepository.getObject(path)) {
+            StreamUtils.copy(stream, response.getOutputStream());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void downloadDirectoryAsZip(String root, String normal, HttpServletResponse response) {
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
+            List<String> resources = getDirectoryContent(root + normal, true);
+
+            for (String resource : resources) {
+                if (resource.endsWith(normal)) {
+                    continue;
+                }
+                addFileToZip(root + normal, resource, zipOutputStream);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void addFileToZip(String path,
+                              String resource,
+                              ZipOutputStream zipOutputStream) throws IOException {
+        try (InputStream in = minioRepository.getObject(resource)) {
+            String substring = resource.substring(path.length());
+            ZipEntry zipEntry = new ZipEntry(substring);
+            zipOutputStream.putNextEntry(zipEntry);
+            in.transferTo(zipOutputStream);
+            zipOutputStream.closeEntry();
+        }
     }
 
     public ResourceResponseDto moveOrRenameResource(String source, String target, Long id) {
@@ -182,28 +216,6 @@ public class ResourceService {
         return getResourceStatWithValidPath(target, id);
     }
 
-    private void zipDirectoryContent(String path, HttpServletResponse response) {
-        try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
-            List<String> resources = getDirectoryContent(path);
-
-            resources.forEach(resource -> {
-                try (InputStream in = minioRepository.getObject(resource)) {
-                    String substring = resource.substring(path.length());
-                    ZipEntry zipEntry = new ZipEntry(substring);
-                    zipOutputStream.putNextEntry(zipEntry);
-                    in.transferTo(zipOutputStream);
-                    zipOutputStream.closeEntry();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-
-            zipOutputStream.finish();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     private List<String> getDirectoryContent(String path) {
         return getDirectoryContent(path, false);
     }
@@ -213,7 +225,8 @@ public class ResourceService {
         List<String> resources = new ArrayList<>();
         results.forEach(result -> {
             try {
-                resources.add(result.get().objectName());
+                String resultingPath = result.get().objectName();
+                resources.add(resultingPath);
             } catch (ErrorResponseException | InsufficientDataException | InternalException |
                      InvalidKeyException | InvalidResponseException | IOException |
                      NoSuchAlgorithmException | ServerException | XmlParserException e) {

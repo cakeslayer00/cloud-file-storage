@@ -9,9 +9,9 @@ import io.minio.Result;
 import io.minio.StatObjectResponse;
 import io.minio.errors.*;
 import io.minio.messages.Item;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import utils.PathUtils;
 
 import java.io.IOException;
@@ -47,6 +47,7 @@ public class DirectoryService {
         return MinioResourceMapper.INSTANCE.toResourceDto(statObjectResponse, id);
     }
 
+    @Transactional(readOnly = true)
     public List<ResourceResponseDto> getDirectoryContent(String path, Long id) {
         String root = PathUtils.getUserRootDirectoryPattern(id);
         String normal = PathUtils.normalizePath(path);
