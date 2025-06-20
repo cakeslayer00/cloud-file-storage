@@ -40,7 +40,7 @@ public class PathUtils {
     }
 
     public static String getUserRootDirectoryPattern(Long userId) {
-        return String.format(USER_ROOT_DIR_PATTERN, userId);
+        return USER_ROOT_DIR_PATTERN.formatted(userId);
     }
 
     public static String getDirectoryName(String path) {

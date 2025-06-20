@@ -27,63 +27,61 @@ import java.util.zip.ZipOutputStream;
 @RequiredArgsConstructor
 public class ResourceService {
 
-    private static final String DIRECTORY_TO_FILE_TRANSMIT_FORBIDDEN = "Moving directory resource to file resource is forbidden";
-    private static final String SOURCE_TO_EXISTING_TARGET_TRANSIT = "Transit of source path resource to target path results with conflict";
     private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with name '%s' doesn't exist";
-    private static final String INVALID_OR_MISSING_PATH = "There is no resource under path %s or it's missing";
-    private static final String CONFLICT_RESOURCE_UPLOAD = "Resource with matching name already uploaded";
-
-    private static final String DUMMY_FILE = ".init";
-    public static final String ROOT_DIRECTORY_REMOVAL_ATTEMPT = "You cannot delete root folder";
+    private static final String INVALID_OR_MISSING_PATH = "There is no resource under path '%s' or it's missing";
+    private static final String CONFLICT_RESOURCE_UPLOAD = "Resource with name '%s' already uploaded";
+    private static final String CONFLICT_RESOURCE_MANIPULATION = "Source and target resources have same path;) ";
+    private static final String FORBIDDEN_RESOURCE_MANIPULATION = "Moving or renaming directory to file is forbidden";
+    private static final String ROOT_DIRECTORY_REMOVAL_ATTEMPT = "You cannot delete root folder;)";
 
     private final MinioRepository minioRepository;
 
     public ResourceResponseDto getResource(String path, Long id) {
         String root = PathUtils.getUserRootDirectoryPattern(id);
-        String normal = PathUtils.normalizePath(path);
+        String relative = PathUtils.normalizePath(path);
 
-        if (!minioRepository.isResourceExists(root + normal)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(normal));
+        if (!minioRepository.isResourceExists(root + relative)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
         }
 
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(root + normal), id);
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(root + relative), id);
     }
 
     public void deleteResource(String path, Long id) {
         String root = PathUtils.getUserRootDirectoryPattern(id);
-        String normal = PathUtils.normalizePath(path);
+        String relative = PathUtils.normalizePath(path);
 
-        if (normal.isEmpty()) {
+        if (relative.isEmpty()) {
             throw new InvalidResourcePathException(ROOT_DIRECTORY_REMOVAL_ATTEMPT);
         }
 
-        if (!minioRepository.isResourceExists(root + normal)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(normal));
+        if (!minioRepository.isResourceExists(root + relative)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
         }
 
         if (PathUtils.isDir(path)) {
-            minioRepository.removeObjects(getDirectoryContent(root + normal, true));
+            minioRepository.removeObjects(getDirectoryContent(root + relative, true));
         } else {
-            minioRepository.removeObject(root + normal);
+            minioRepository.removeObject(root + relative);
         }
     }
 
     public void downloadResource(String path, Long id, HttpServletResponse response) {
         String root = PathUtils.getUserRootDirectoryPattern(id);
-        String normal = PathUtils.normalizePath(path);
+        String relative = PathUtils.normalizePath(path);
 
-        if (!minioRepository.isResourceExists(root + normal)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(normal));
+        if (!minioRepository.isResourceExists(root + relative)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
         }
 
-        if (!PathUtils.isDir(normal)) {
-            downloadSingleFile(root + normal, response);
+        if (!PathUtils.isDir(relative)) {
+            downloadSingleFile(root + relative, response);
         } else {
-            downloadDirectoryAsZip(root, normal, response);
+            downloadDirectoryAsZip(root, relative, response);
         }
 
         response.setContentType("application/octet-stream");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + normal + "\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + relative + "\"");
     }
 
     private void downloadSingleFile(String path, HttpServletResponse response) {
@@ -94,24 +92,22 @@ public class ResourceService {
         }
     }
 
-    private void downloadDirectoryAsZip(String root, String normal, HttpServletResponse response) {
+    private void downloadDirectoryAsZip(String root, String relative, HttpServletResponse response) {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
-            List<String> resources = getDirectoryContent(root + normal, true);
+            List<String> resources = getDirectoryContent(root + relative, true);
 
             for (String resource : resources) {
-                if (resource.endsWith(normal)) {
+                if (resource.endsWith(relative)) {
                     continue;
                 }
-                addFileToZip(root + normal, resource, zipOutputStream);
+                addFileToZip(root + relative, resource, zipOutputStream);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void addFileToZip(String path,
-                              String resource,
-                              ZipOutputStream zipOutputStream) throws IOException {
+    private void addFileToZip(String path, String resource, ZipOutputStream zipOutputStream) throws IOException {
         try (InputStream in = minioRepository.getObject(resource)) {
             String substring = resource.substring(path.length());
             ZipEntry zipEntry = new ZipEntry(substring);
@@ -121,21 +117,70 @@ public class ResourceService {
         }
     }
 
+    //TODO: Not right implementation
     public ResourceResponseDto moveOrRenameResource(String source, String target, Long id) {
-        source = PathUtils.getValidRootResourcePath(source, id);
-        target = PathUtils.getValidRootResourcePath(target, id);
+        String root = PathUtils.getUserRootDirectoryPattern(id);
+        source = PathUtils.normalizePath(source);
+        target = PathUtils.normalizePath(target);
 
         if (source.equals(target)) {
-            throw new ConflictingResourceException(SOURCE_TO_EXISTING_TARGET_TRANSIT);
+            throw new ConflictingResourceException(CONFLICT_RESOURCE_MANIPULATION);
         }
 
-        if (!minioRepository.isResourceExists(source)) {
+        if (!minioRepository.isResourceExists(root + source)) {
             throw new InvalidResourcePathException(INVALID_OR_MISSING_PATH.formatted(source));
         }
 
-        return PathUtils.isDir(source)
-                ? handleDirectoryMove(source, target, id)
-                : handleFileMove(source, target, id);
+        if (PathUtils.isDir(source)) {
+            return handleDirectoryMove(root, source, target, id);
+        }
+
+        return handleFileMove(root, source, target, id);
+    }
+
+    private ResourceResponseDto handleDirectoryMove(String root, String source, String target, Long id) {
+        if (!PathUtils.isDir(target)) {
+            throw new IncompatibleResourceTransmissionException(FORBIDDEN_RESOURCE_MANIPULATION);
+        }
+        return moveDirectory(root, source, target, id);
+    }
+
+    private ResourceResponseDto handleFileMove(String root, String source, String target, Long id) {
+        if (PathUtils.isDir(target)) {
+            return moveFile(root + source, root + target + PathUtils.getFileName(source), id);
+        }
+        return moveFile(root + source, root + target, id);
+    }
+
+    private ResourceResponseDto moveDirectory(String root, String source, String target, Long id) {
+        List<String> sourceDirContent = getDirectoryContent(root + source, true);
+
+        sourceDirContent.forEach(path -> {
+            minioRepository.copyObject(path, root + target);
+            minioRepository.removeObject(path);
+        });
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(root + target), id);
+    }
+
+    private ResourceResponseDto moveFile(String source, String target, Long id) {
+        minioRepository.copyObject(source, target);
+        minioRepository.removeObject(source);
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(target), id);
+    }
+
+    public ResourceResponseDto uploadResource(String path, MultipartFile file, Long id) {
+        path = PathUtils.getValidRootResourcePath(path, id) + file.getOriginalFilename();
+
+        if (minioRepository.isResourceExists(path)) {
+            throw new ConflictingResourceException(CONFLICT_RESOURCE_UPLOAD.formatted(file.getOriginalFilename()));
+        }
+
+        try {
+            minioRepository.putObject(path, file.getInputStream(), file.getSize());
+            return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(path), id);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public List<ResourceResponseDto> searchFromPrefix(String query, Long id) {
@@ -145,21 +190,6 @@ public class ResourceService {
         List<ResourceResponseDto> resources = new ArrayList<>();
         results.forEach(result -> resources.add(MinioResourceMapper.INSTANCE.toResourceDto(result, id)));
         return resources;
-    }
-
-    public ResourceResponseDto uploadResource(String path, MultipartFile file, Long id) {
-        path = PathUtils.getValidRootResourcePath(path, id) + file.getOriginalFilename();
-
-        if (minioRepository.isResourceExists(path)) {
-            throw new ConflictingResourceException(CONFLICT_RESOURCE_UPLOAD);
-        }
-
-        try {
-            minioRepository.putObject(path, file.getInputStream(), file.getSize());
-            return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(path), id);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     public List<ResourceResponseDto> searchFromRoot(String query, Long id) {
@@ -182,40 +212,6 @@ public class ResourceService {
         return resources;
     }
 
-    private ResourceResponseDto getResourceStatWithValidPath(String path, Long id) {
-        if (PathUtils.isDir(path)) {
-            path += DUMMY_FILE;
-        }
-
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(path), id);
-    }
-
-    private ResourceResponseDto handleFileMove(String source, String target, Long id) {
-        if (PathUtils.isDir(target)) {
-            return moveFile(source, target + PathUtils.getFileName(source), id);
-        }
-        return moveFile(source, target, id);
-    }
-
-    private ResourceResponseDto handleDirectoryMove(String source, String target, Long id) {
-        if (!PathUtils.isDir(target)) {
-            throw new IncompatibleResourceTransmissionException(DIRECTORY_TO_FILE_TRANSMIT_FORBIDDEN);
-        }
-        return moveDirectory(source, target, id);
-    }
-
-    private ResourceResponseDto moveFile(String source, String target, Long id) {
-        minioRepository.copyObject(source, target);
-        minioRepository.removeObject(source);
-        return getResourceStatWithValidPath(target, id);
-    }
-
-    private ResourceResponseDto moveDirectory(String source, String target, Long id) {
-        List<String> sourceDirContent = getDirectoryContent(source, true);
-        sourceDirContent.forEach(path -> handleFileMove(path, target, id));
-        return getResourceStatWithValidPath(target, id);
-    }
-
     private List<String> getDirectoryContent(String path) {
         return getDirectoryContent(path, false);
     }
@@ -235,4 +231,5 @@ public class ResourceService {
         });
         return resources;
     }
+
 }
