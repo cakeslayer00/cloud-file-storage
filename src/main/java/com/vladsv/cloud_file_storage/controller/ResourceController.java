@@ -44,7 +44,7 @@ public class ResourceController {
     @GetMapping("/search")
     public ResponseEntity<List<ResourceResponseDto>> search(@RequestParam("query") String query,
                                                             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.searchFromPrefix(query, user.getId()));
+        return ResponseEntity.ok(resourceService.searchFromRoot(query, user.getId()));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

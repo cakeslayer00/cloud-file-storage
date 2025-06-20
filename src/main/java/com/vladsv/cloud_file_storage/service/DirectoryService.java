@@ -54,10 +54,6 @@ public class DirectoryService {
     }
 
     public void createRootDirectory(String path) {
-        if (minioRepository.isResourceExists(BUCKET, path)) {
-            throw new DirectoryAlreadyExistsException(DIRECTORY_ALREADY_EXISTS);
-        }
-
         minioRepository.putEmptyObject(BUCKET, path + DUMMY_FILE);
     }
     

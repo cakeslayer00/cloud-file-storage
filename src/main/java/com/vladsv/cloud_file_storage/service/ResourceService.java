@@ -123,7 +123,7 @@ public class ResourceService {
     public List<ResourceResponseDto> searchFromRoot(String query, Long id) {
         String userRootPrefix = PathUtils.getUserRootDirectoryPrefix(id);
 
-        Iterable<Result<Item>> results = minioRepository.listObjectsRecursive(BUCKET, ROOT);
+        Iterable<Result<Item>> results = minioRepository.listObjectsRecursive(BUCKET, userRootPrefix);
         List<ResourceResponseDto> resources = new ArrayList<>();
         results.forEach(result -> {
             try {
