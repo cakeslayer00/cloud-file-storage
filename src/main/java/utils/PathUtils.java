@@ -7,6 +7,10 @@ public class PathUtils {
 
     public static final String USER_ROOT_DIR_PATTERN = "user-%s-files/";
 
+    public static String getUserRootDirectoryPatternWithNoSlash(Long id) {
+        return USER_ROOT_DIR_PATTERN.formatted(id).replace("/", "");
+    }
+
     public static String getValidRootDirectoryPath(String path, Long userId) {
         return applyUserRootDirectoryPattern(getValidDirectoryPath(path), userId);
     }

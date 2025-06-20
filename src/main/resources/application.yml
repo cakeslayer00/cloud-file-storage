@@ -26,6 +26,6 @@ spring:
     timeout: 3600
   minio:
     endpoint: http://127.0.0.1:9000 #MINIO_ENDPOINT
-    access_key: pusdXdniq4rhH7ka6XQy #MINIO_ACCESS_KEY
-    secret_key: PfaWKgmdxdBgxg0HEQcbnJWLWucV8LiVwxs0N00F #MINIO_SECRET_KEY
+    access_key: LuWR4HMaMwZugfkYhwVW #MINIO_ACCESS_KEY
+    secret_key: cGrBQJwEYXVcg1kGIKOyUbKnlz0ZXGJkyLtxNtbY #MINIO_SECRET_KEY
     bucket_name: user-files

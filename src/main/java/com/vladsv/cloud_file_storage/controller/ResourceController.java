@@ -23,7 +23,14 @@ public class ResourceController {
     @GetMapping
     public ResponseEntity<ResourceResponseDto> get(@RequestParam("path") String path,
                                                    @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.getResourceStat(path, user.getId()));
+        return ResponseEntity.ok(resourceService.getResource(path, user.getId()));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Void> delete(@RequestParam("path") String path,
+                                       @AuthenticationPrincipal User user) {
+        resourceService.deleteResource(path, user.getId());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -52,13 +59,6 @@ public class ResourceController {
     public ResponseEntity<List<ResourceResponseDto>> search(@RequestParam("query") String query,
                                                             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(resourceService.searchFromRoot(query, user.getId()));
-    }
-
-    @DeleteMapping
-    public ResponseEntity<Void> delete(@RequestParam("path") String path,
-                       @AuthenticationPrincipal User user) {
-        resourceService.deleteResource(path, user.getId());
-        return ResponseEntity.noContent().build();
     }
 
 }

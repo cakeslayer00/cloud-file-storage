@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import utils.PathUtils;
 
 import java.io.*;
 import java.security.InvalidKeyException;
@@ -73,13 +72,12 @@ public class MinioRepository {
     }
 
     public Iterable<Result<Item>> listObjects(String path) {
-        return minioClient.listObjects(
-                ListObjectsArgs.builder().bucket(bucketName).prefix(path).build());
+        return listObjects(path, false);
     }
 
-    public Iterable<Result<Item>> listObjectsRecursive(String path) {
+    public Iterable<Result<Item>> listObjects(String path, boolean recursive) {
         return minioClient.listObjects(
-                ListObjectsArgs.builder().bucket(bucketName).prefix(path).recursive(true).build());
+                ListObjectsArgs.builder().bucket(bucketName).prefix(path).recursive(recursive).build());
     }
 
     public void putEmptyObject(String path) {

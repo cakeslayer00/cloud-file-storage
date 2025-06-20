@@ -1,10 +1,7 @@
 package com.vladsv.cloud_file_storage.service;
 
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
-import com.vladsv.cloud_file_storage.exception.ConflictingResourceException;
-import com.vladsv.cloud_file_storage.exception.IncompatibleResourceTransmissionException;
-import com.vladsv.cloud_file_storage.exception.InvalidResourcePathException;
-import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
+import com.vladsv.cloud_file_storage.exception.*;
 import com.vladsv.cloud_file_storage.mapper.MinioResourceMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
 import io.minio.Result;
@@ -20,8 +17,10 @@ import utils.PathUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.InvalidKeyException;
+import java.security.InvalidParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -32,20 +31,43 @@ public class ResourceService {
 
     private static final String DIRECTORY_TO_FILE_TRANSMIT_FORBIDDEN = "Moving directory resource to file resource is forbidden";
     private static final String SOURCE_TO_EXISTING_TARGET_TRANSIT = "Transit of source path resource to target path results with conflict";
-    private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with given name does not exist";
+    private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with name '%s' doesn't exist";
     private static final String INVALID_OR_MISSING_PATH = "There is no resource under path %s or it's missing";
     private static final String CONFLICT_RESOURCE_UPLOAD = "Resource with matching name already uploaded";
 
-    private static final String BUCKET = "user-files";
     private static final String DUMMY_FILE = ".init";
-    private static final String ROOT = "";
+    public static final String ROOT_DIRECTORY_REMOVAL_ATTEMPT = "You cannot delete root folder";
 
     private final MinioRepository minioRepository;
 
-    public ResourceResponseDto getResourceStat(String path, Long id) {
-        path = PathUtils.getValidRootResourcePath(path, id);
+    public ResourceResponseDto getResource(String path, Long id) {
+        String root = PathUtils.getUserRootDirectoryPattern(id);
+        String normal = PathUtils.normalizePath(path);
 
-        return getResourceStatWithValidPath(path, id);
+        if (!minioRepository.isResourceExists(root + normal)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(normal));
+        }
+
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(root + normal), id);
+    }
+
+    public void deleteResource(String path, Long id) {
+        String root = PathUtils.getUserRootDirectoryPattern(id);
+        String normal = PathUtils.normalizePath(path);
+
+        if (normal.isEmpty()) {
+            throw new InvalidResourcePathException(ROOT_DIRECTORY_REMOVAL_ATTEMPT);
+        }
+
+        if (!minioRepository.isResourceExists(root + normal)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(normal));
+        }
+
+        if (PathUtils.isDir(path)) {
+            minioRepository.removeObjects(getDirectoryContent(root + normal, true));
+        } else {
+            minioRepository.removeObject(root + normal);
+        }
     }
 
     public void downloadResource(String path, Long id, HttpServletResponse response) {
@@ -63,20 +85,6 @@ public class ResourceService {
 
         response.setContentType("application/octet-stream");
         response.setHeader("Content-Disposition", "attachment; filename=\"" + path + "\"");
-    }
-
-    public void deleteResource(String path, Long id) {
-        path = PathUtils.getValidRootResourcePath(path, id);
-
-        if (!minioRepository.isResourceExists(path)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS);
-        }
-
-        if (PathUtils.isDir(path)) {
-            minioRepository.removeObjects(getDirectoryContentRecursive(path));
-        } else {
-            minioRepository.removeObject(path);
-        }
     }
 
     public ResourceResponseDto moveOrRenameResource(String source, String target, Long id) {
@@ -99,7 +107,7 @@ public class ResourceService {
     public List<ResourceResponseDto> searchFromPrefix(String query, Long id) {
         query = PathUtils.getValidRootResourcePath(query, id);
 
-        Iterable<Result<Item>> results = minioRepository.listObjectsRecursive(query);
+        Iterable<Result<Item>> results = minioRepository.listObjects(query);
         List<ResourceResponseDto> resources = new ArrayList<>();
         results.forEach(result -> resources.add(MinioResourceMapper.INSTANCE.toResourceDto(result, id)));
         return resources;
@@ -123,7 +131,7 @@ public class ResourceService {
     public List<ResourceResponseDto> searchFromRoot(String query, Long id) {
         String userRootPrefix = PathUtils.getUserRootDirectoryPattern(id);
 
-        Iterable<Result<Item>> results = minioRepository.listObjectsRecursive(userRootPrefix);
+        Iterable<Result<Item>> results = minioRepository.listObjects(userRootPrefix);
         List<ResourceResponseDto> resources = new ArrayList<>();
         results.forEach(result -> {
             try {
@@ -169,7 +177,7 @@ public class ResourceService {
     }
 
     private ResourceResponseDto moveDirectory(String source, String target, Long id) {
-        List<String> sourceDirContent = getDirectoryContentRecursive(source);
+        List<String> sourceDirContent = getDirectoryContent(source, true);
         sourceDirContent.forEach(path -> handleFileMove(path, target, id));
         return getResourceStatWithValidPath(target, id);
     }
@@ -196,23 +204,12 @@ public class ResourceService {
         }
     }
 
-    private List<String> getDirectoryContentRecursive(String path) {
-        Iterable<Result<Item>> results = minioRepository.listObjectsRecursive(path);
-        List<String> resources = new ArrayList<>();
-        results.forEach(result -> {
-            try {
-                resources.add(result.get().objectName());
-            } catch (ErrorResponseException | InsufficientDataException | InternalException |
-                     InvalidKeyException | InvalidResponseException | IOException |
-                     NoSuchAlgorithmException | ServerException | XmlParserException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        return resources;
+    private List<String> getDirectoryContent(String path) {
+        return getDirectoryContent(path, false);
     }
 
-    private List<String> getDirectoryContent(String path) {
-        Iterable<Result<Item>> results = minioRepository.listObjects(path);
+    private List<String> getDirectoryContent(String path, boolean recursive) {
+        Iterable<Result<Item>> results = minioRepository.listObjects(path, recursive);
         List<String> resources = new ArrayList<>();
         results.forEach(result -> {
             try {

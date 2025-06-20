@@ -47,7 +47,7 @@ public class DirectoryService {
         return MinioResourceMapper.INSTANCE.toResourceDto(statObjectResponse, id);
     }
 
-    public List<ResourceResponseDto> getDirResources(String path, Long id) {
+    public List<ResourceResponseDto> getDirectoryContent(String path, Long id) {
         String root = PathUtils.getUserRootDirectoryPattern(id);
         String normal = PathUtils.normalizePath(path);
         String relative = normal.isEmpty() ? normal : PathUtils.applyDirectorySuffix(normal);

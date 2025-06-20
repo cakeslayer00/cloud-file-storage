@@ -37,7 +37,7 @@ public interface MinioResourceMapper {
             String name = lastSlash >= 0 ? trimmed.substring(lastSlash + 1) : trimmed;
             String path = lastSlash > 0 ? trimmed.substring(0, lastSlash + 1) : "/";
 
-            return new ResourceResponseDto(path, name, item.size(), isDir ? "DIRECTORY" : "FILE");
+            return new ResourceResponseDto(path, isDir ? name + "/" : name, item.size(), isDir ? "DIRECTORY" : "FILE");
         } catch (ErrorResponseException | InsufficientDataException | InternalException |
                  InvalidKeyException | InvalidResponseException | IOException |
                  NoSuchAlgorithmException | ServerException | XmlParserException e) {
@@ -50,7 +50,7 @@ public interface MinioResourceMapper {
             return null;
         }
 
-        String relative = response.object().substring(PathUtils.getUserRootDirectoryPattern(id).length());
+        String relative = response.object().substring(PathUtils.getUserRootDirectoryPatternWithNoSlash(id).length());
 
         boolean isDir = relative.endsWith("/");
         String trimmed = isDir
@@ -61,7 +61,7 @@ public interface MinioResourceMapper {
         String name = lastSlash >= 0 ? trimmed.substring(lastSlash + 1) : trimmed;
         String path = lastSlash > 0 ? trimmed.substring(0, lastSlash + 1) : "/";
 
-        return new ResourceResponseDto(path, name, response.size(), isDir ? "DIRECTORY" : "FILE");
+        return new ResourceResponseDto(path.replaceFirst("^/", ""), isDir ? name + "/" : name, response.size(), isDir ? "DIRECTORY" : "FILE");
     }
 
 }

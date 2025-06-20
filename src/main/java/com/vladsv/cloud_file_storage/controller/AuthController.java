@@ -25,8 +25,7 @@ public class AuthController {
     public ResponseEntity<UserResponseDto> signUp(@RequestBody @Valid UserRequestDto userRequestDto,
                                                   HttpServletRequest request,
                                                   HttpServletResponse response) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.CREATED)
                 .body(authService.register(userRequestDto, request, response));
     }
 
