@@ -19,7 +19,6 @@ import java.util.List;
 public class DirectoryController {
 
     private final DirectoryService directoryService;
-    private final ResourceService resourceService;
 
     @GetMapping
     public ResponseEntity<List<ResourceResponseDto>> getDirectoryContent(@RequestParam("path") String path,
@@ -31,9 +30,7 @@ public class DirectoryController {
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<ResourceResponseDto> createDirectory(@RequestParam("path") String path,
                                                                @AuthenticationPrincipal User user) {
-        directoryService.createEmptyDirectory(path, user.getId());
-
-        return ResponseEntity.ok(resourceService.getResourceStat(PathUtils.getValidDirectoryPath(path), user.getId()));
+        return ResponseEntity.ok(directoryService.createEmptyDirectory(path, user.getId()));
     }
 
 }

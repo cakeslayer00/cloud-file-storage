@@ -22,6 +22,8 @@ import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static utils.PathUtils.USER_ROOT_DIR_PATTERN;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -29,15 +31,14 @@ public class AuthService {
     private static final String USERNAME_ALREADY_TAKEN = "Username '%s' is already taken";
     private static final String USER_NOT_FOUND = "Username not found, try again!";
     private static final String INVALID_PASSWORD = "Invalid password, try again!";
-    private static final String USER_ROOT_DIRECTORY_FORMAT = "user-%s-files/";
 
     private final SecurityContextRepository securityContextRepository;
-
     private final AuthenticationManager authenticationManager;
+    private final PasswordEncoder passwordEncoder;
+
+    private final DirectoryService minioRepository;
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final DirectoryService minioRepository;
 
     @Transactional
     public UserResponseDto register(UserRequestDto userRequestDto,
@@ -55,11 +56,12 @@ public class AuthService {
         userRepository.saveAndFlush(user);
 
         setupSecurityContextExplicitly(userRequestDto, request, response);
-        minioRepository.createRootDirectory(USER_ROOT_DIRECTORY_FORMAT.formatted(user.getId()));
+        minioRepository.createRootDirectory(USER_ROOT_DIR_PATTERN.formatted(user.getId()));
 
         return UserMapper.INSTANCE.toDto(user);
     }
 
+    @Transactional(readOnly = true)
     public UserResponseDto authenticate(UserRequestDto userRequestDto,
                                         HttpServletRequest request,
                                         HttpServletResponse response) {

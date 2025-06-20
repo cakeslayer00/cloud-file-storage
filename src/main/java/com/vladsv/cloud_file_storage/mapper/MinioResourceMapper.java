@@ -26,11 +26,11 @@ public interface MinioResourceMapper {
 
             Item item = result.get();
 
-            String relative = item.objectName().substring(PathUtils.getUserRootDirectoryPrefix(id).length());
+            String relative = item.objectName().substring(PathUtils.getUserRootDirectoryPattern(id).length());
 
-            boolean isDir = relative.endsWith("/.init");
+            boolean isDir = relative.endsWith("/");
             String trimmed = isDir
-                    ? relative.substring(0, relative.length() - 6)
+                    ? relative.substring(0, relative.length() - 1)
                     : relative;
 
             int lastSlash = trimmed.lastIndexOf("/");
@@ -50,11 +50,11 @@ public interface MinioResourceMapper {
             return null;
         }
 
-        String relative = response.object().substring(PathUtils.getUserRootDirectoryPrefix(id).length());
+        String relative = response.object().substring(PathUtils.getUserRootDirectoryPattern(id).length());
 
-        boolean isDir = relative.endsWith("/.init");
+        boolean isDir = relative.endsWith("/");
         String trimmed = isDir
-                ? relative.substring(0, relative.length() - 6)
+                ? relative.substring(0, relative.length() - 1)
                 : relative;
 
         int lastSlash = trimmed.lastIndexOf("/");

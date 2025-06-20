@@ -3,10 +3,13 @@ package com.vladsv.cloud_file_storage.service;
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
 import com.vladsv.cloud_file_storage.exception.DirectoryAlreadyExistsException;
 import com.vladsv.cloud_file_storage.exception.DirectoryDoesNotExistsException;
+import com.vladsv.cloud_file_storage.mapper.MinioResourceMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
 import io.minio.Result;
+import io.minio.StatObjectResponse;
 import io.minio.errors.*;
 import io.minio.messages.Item;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import utils.PathUtils;
@@ -20,62 +23,64 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class DirectoryService {
-
-    private static final String DIRECTORY_DOES_NOT_EXISTS = "Directory with given name does not exist";
-    private static final String DIRECTORY_ALREADY_EXISTS = "Directory with given name already exists";
-
-    private static final String BUCKET = "user-files";
-    private static final String DUMMY_FILE = ".init";
+    private static final String DIRECTORY_DOES_NOT_EXISTS = "Directory with name '%s' does not exist";
+    private static final String DIRECTORY_ALREADY_EXISTS = "Directory with name '%s' already exists";
 
     private final MinioRepository minioRepository;
 
-    public List<ResourceResponseDto> getDirResources(String origin, Long userId) {
-        String rootPath = PathUtils.getValidRootDirectoryPath(origin, userId);
-        String prefix = PathUtils.getUserRootDirectoryPrefix(userId);
-        Iterable<Result<Item>> resources = minioRepository.listObjects(BUCKET, rootPath);
+    public void createRootDirectory(String path) {
+        minioRepository.putEmptyObject(path);
+    }
+
+    @Transactional
+    public ResourceResponseDto createEmptyDirectory(String path, Long id) {
+        String root = PathUtils.getUserRootDirectoryPattern(id);
+        String normal = PathUtils.normalizePath(path);
+        String relative = normal.isEmpty() ? normal : PathUtils.applyDirectorySuffix(normal);
+
+        if (minioRepository.isResourceExists(root + relative)) {
+            throw new DirectoryAlreadyExistsException(DIRECTORY_ALREADY_EXISTS.formatted(normal));
+        }
+
+        minioRepository.putEmptyObject(root + relative);
+        StatObjectResponse statObjectResponse = minioRepository.statObject(root + relative);
+        return MinioResourceMapper.INSTANCE.toResourceDto(statObjectResponse, id);
+    }
+
+    public List<ResourceResponseDto> getDirResources(String path, Long id) {
+        String root = PathUtils.getUserRootDirectoryPattern(id);
+        String normal = PathUtils.normalizePath(path);
+        String relative = normal.isEmpty() ? normal : PathUtils.applyDirectorySuffix(normal);
+        Iterable<Result<Item>> resources = minioRepository.listObjects(root + relative);
 
         if (!resources.iterator().hasNext()) {
-            throw new DirectoryDoesNotExistsException(DIRECTORY_DOES_NOT_EXISTS);
+            throw new DirectoryDoesNotExistsException(DIRECTORY_DOES_NOT_EXISTS.formatted(normal));
         }
 
         List<ResourceResponseDto> res = new ArrayList<>();
-        resources.forEach(resource -> res.add(mapToResourceResponseDto(prefix, resource)));
+        resources.forEach(resource -> {
+            if (isRootDir(resource, relative, root)) return;
+            res.add(MinioResourceMapper.INSTANCE.toResourceDto(resource, id));
+        });
         return res;
     }
 
-    public void createEmptyDirectory(String path, Long id) {
-        String rootPath = PathUtils.getValidRootDirectoryPath(path, id);
-
-        if (minioRepository.isResourceExists(BUCKET, rootPath)) {
-            throw new DirectoryAlreadyExistsException(DIRECTORY_ALREADY_EXISTS);
-        }
-
-        minioRepository.putEmptyObject(BUCKET, rootPath + DUMMY_FILE);
-    }
-
-    public void createRootDirectory(String path) {
-        minioRepository.putEmptyObject(BUCKET, path + DUMMY_FILE);
-    }
-    
-    private ResourceResponseDto mapToResourceResponseDto(String userRootDirPrefix, Result<Item> resource) {
+    private boolean isRootDir(Result<Item> resource, String relative, String root) {
         try {
-            Item item = resource.get();
+            String path = resource.get().objectName().substring(root.length());
+            if (relative.isEmpty() && path.isEmpty()) {
+                return true;
+            }
 
-            String relative = item.objectName().substring(userRootDirPrefix.length());
-
-            String trimmed = item.isDir()
-                    ? relative.substring(0, relative.length() - 1)
-                    : relative;
-
-            int lastSlash = trimmed.lastIndexOf("/");
-            String name = lastSlash >= 0 ? trimmed.substring(lastSlash + 1) : trimmed;
-            String path = lastSlash > 0 ? trimmed.substring(0, lastSlash + 1) : "/";
-
-            return new ResourceResponseDto(path, name, item.size(), item.isDir() ? "DIRECTORY" : "FILE");
-        } catch (ErrorResponseException | InsufficientDataException | InternalException |
-                 InvalidKeyException | InvalidResponseException | IOException |
-                 NoSuchAlgorithmException | ServerException | XmlParserException e) {
+            if (!relative.isEmpty() && path.endsWith(relative)) {
+                return true;
+            }
+        } catch (ErrorResponseException | InvalidKeyException | InvalidResponseException |
+                 IOException | NoSuchAlgorithmException | ServerException |
+                 XmlParserException | InternalException | InsufficientDataException e) {
             throw new RuntimeException(e);
         }
+        return false;
     }
+
 }

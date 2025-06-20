@@ -26,6 +26,13 @@ public class ResourceController {
         return ResponseEntity.ok(resourceService.getResourceStat(path, user.getId()));
     }
 
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ResourceResponseDto> upload(@RequestParam("path") String path,
+                                                      @RequestPart("object") MultipartFile file,
+                                                      @AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(resourceService.uploadResource(path, file, user.getId()));
+    }
+
     @GetMapping("/download")
     public ResponseEntity<Void> download(@RequestParam("path") String path,
                                          @AuthenticationPrincipal User user,
@@ -45,13 +52,6 @@ public class ResourceController {
     public ResponseEntity<List<ResourceResponseDto>> search(@RequestParam("query") String query,
                                                             @AuthenticationPrincipal User user) {
         return ResponseEntity.ok(resourceService.searchFromRoot(query, user.getId()));
-    }
-
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResourceResponseDto> upload(@RequestParam("path") String path,
-                                                      @RequestPart("file") MultipartFile file,
-                                                      @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.uploadResource(path, file, user.getId()));
     }
 
     @DeleteMapping

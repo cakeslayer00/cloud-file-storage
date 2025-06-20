@@ -7,33 +7,34 @@ import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import utils.PathUtils;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class MinioRepository {
 
     private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with given name does not exist";
-
-    private static final String DUMMY_FILE = ".init";
+    private static final String DUMMY_FILE = "/";
 
     private final MinioClient minioClient;
 
-    public StatObjectResponse statObject(String bucket, String path) {
+    @Value("${spring.minio.bucket_name}")
+    private String bucketName;
+
+    public StatObjectResponse statObject(String path) {
         try {
             return minioClient.statObject(
-                    StatObjectArgs.builder().bucket(bucket).object(path).build());
+                    StatObjectArgs.builder().bucket(bucketName).object(path).build());
         } catch (ErrorResponseException | InsufficientDataException | InternalException |
                  InvalidKeyException | InvalidResponseException | IOException |
                  NoSuchAlgorithmException | ServerException | XmlParserException e) {
@@ -41,10 +42,10 @@ public class MinioRepository {
         }
     }
 
-    public InputStream getObject(String bucket, String path) {
+    public InputStream getObject(String path) {
         try {
             return minioClient.getObject(
-                    GetObjectArgs.builder().bucket(bucket).object(path).build());
+                    GetObjectArgs.builder().bucket(bucketName).object(path).build());
         } catch (ErrorResponseException e) {
             //TODO: not sure whether this right, check out/sdf
             if (e.getMessage().contains("The specified key does not exist")) {
@@ -58,10 +59,10 @@ public class MinioRepository {
         }
     }
 
-    public void putObject(String bucket, String path, InputStream inputStream, long size) {
+    public void putObject(String path, InputStream inputStream, long size) {
         try {
             minioClient.putObject(
-                    PutObjectArgs.builder().bucket(bucket).object(path).stream(
+                    PutObjectArgs.builder().bucket(bucketName).object(path).stream(
                                     inputStream, size, -1)
                             .build());
         } catch (ErrorResponseException | InvalidKeyException | InvalidResponseException |
@@ -71,20 +72,20 @@ public class MinioRepository {
         }
     }
 
-    public Iterable<Result<Item>> listObjects(String bucket, String path) {
+    public Iterable<Result<Item>> listObjects(String path) {
         return minioClient.listObjects(
-                ListObjectsArgs.builder().bucket(bucket).prefix(path).build());
+                ListObjectsArgs.builder().bucket(bucketName).prefix(path).build());
     }
 
-    public Iterable<Result<Item>> listObjectsRecursive(String bucket, String path) {
+    public Iterable<Result<Item>> listObjectsRecursive(String path) {
         return minioClient.listObjects(
-                ListObjectsArgs.builder().bucket(bucket).prefix(path).recursive(true).build());
+                ListObjectsArgs.builder().bucket(bucketName).prefix(path).recursive(true).build());
     }
 
-    public void putEmptyObject(String bucket, String path) {
+    public void putEmptyObject(String path) {
         try {
             minioClient.putObject(PutObjectArgs.builder()
-                    .bucket(bucket)
+                    .bucket(bucketName)
                     .object(path)
                     .stream(new ByteArrayInputStream(new byte[]{}), 0, -1)
                     .build());
@@ -95,15 +96,15 @@ public class MinioRepository {
         }
     }
 
-    public void copyObject(String bucket, String source, String target) {
+    public void copyObject(String source, String target) {
         try {
             minioClient.copyObject(
                     CopyObjectArgs.builder()
-                            .bucket(bucket)
+                            .bucket(bucketName)
                             .object(target)
                             .source(
                                     CopySource.builder()
-                                            .bucket(bucket)
+                                            .bucket(bucketName)
                                             .object(source)
                                             .build())
                             .build());
@@ -114,10 +115,10 @@ public class MinioRepository {
         }
     }
 
-    public void removeObject(String bucket, String path) {
+    public void removeObject(String path) {
         try {
             minioClient.removeObject(
-                    RemoveObjectArgs.builder().bucket(bucket).object(path).build());
+                    RemoveObjectArgs.builder().bucket(bucketName).object(path).build());
         } catch (ErrorResponseException | InsufficientDataException | InternalException |
                  InvalidKeyException | InvalidResponseException | IOException |
                  NoSuchAlgorithmException | ServerException | XmlParserException e) {
@@ -125,18 +126,16 @@ public class MinioRepository {
         }
     }
 
-    public void removeObjects(String bucket, List<String> objects) {
+    public void removeObjects(List<String> objects) {
         try {
             List<DeleteObject> deleteObjectList = new LinkedList<>(
                     objects.stream().map(DeleteObject::new).toList());
             Iterable<Result<DeleteError>> results =
                     minioClient.removeObjects(
-                            RemoveObjectsArgs.builder().bucket(bucket).objects(deleteObjectList).build());
+                            RemoveObjectsArgs.builder().bucket(bucketName).objects(deleteObjectList).build());
             for (Result<DeleteError> result : results) {
                 DeleteError error = result.get();
-                //TODO: add logging
-                System.out.println(
-                        "Error in deleting object " + error.objectName() + "; " + error.message());
+                log.debug("Error in deleting object {}; {}", error.objectName(), error.message());
             }
         } catch (ErrorResponseException | InsufficientDataException | InternalException |
                  InvalidKeyException | InvalidResponseException | IOException |
@@ -145,11 +144,11 @@ public class MinioRepository {
         }
     }
 
-    public boolean isResourceExists(String bucket, String name) {
+    public boolean isResourceExists(String name) {
         try {
             minioClient.statObject(StatObjectArgs.builder()
-                    .bucket(bucket)
-                    .object(PathUtils.isDir(name) ? name + DUMMY_FILE : name).build());
+                    .bucket(bucketName)
+                    .object(name).build());
             return true;
         } catch (ErrorResponseException e) {
             return false;

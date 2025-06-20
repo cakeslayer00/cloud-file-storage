@@ -1,29 +1,21 @@
 package utils;
 
-import com.vladsv.cloud_file_storage.exception.InvalidDirectoryPathException;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class PathUtils {
 
-    private static final String INVALID_DIRECTORY_PATH = "Invalid directory path or it's missing";
-    private static final String INVALID_RESOURCE_PATH = "Invalid resource path or its missing";
-
-    private static final String USER_ROOT_DIRECTORY_PREFIX = "user-%s-files/";
+    public static final String USER_ROOT_DIR_PATTERN = "user-%s-files/";
 
     public static String getValidRootDirectoryPath(String path, Long userId) {
-        return applyUserRootDirectoryPrefix(getValidDirectoryPath(path), userId);
+        return applyUserRootDirectoryPattern(getValidDirectoryPath(path), userId);
     }
 
     public static String getValidRootResourcePath(String path, Long userId) {
-        return applyUserRootDirectoryPrefix(normalizePath(path), userId);
+        return applyUserRootDirectoryPattern(normalizePath(path), userId);
     }
 
     public static String getValidDirectoryPath(String path) {
-        if (!path.matches("[A-Za-z0-9/]*")) {
-            throw new InvalidDirectoryPathException(INVALID_DIRECTORY_PATH);
-        }
-
         return normalizePath(applyDirectorySuffix(path));
     }
 
@@ -35,16 +27,16 @@ public class PathUtils {
         return path.replaceAll("/{2,}", "/").replaceFirst("^/", "");
     }
 
-    public static String applyUserRootDirectoryPrefix(String path, Long userId) {
-        return String.format(USER_ROOT_DIRECTORY_PREFIX, userId) + path;
+    public static String applyUserRootDirectoryPattern(String path, Long id) {
+        return USER_ROOT_DIR_PATTERN.formatted(id) + path;
     }
 
     public static String applyDirectorySuffix(String path) {
         return path.endsWith("/") ? path : path + "/";
     }
 
-    public static String getUserRootDirectoryPrefix(Long userId) {
-        return String.format(USER_ROOT_DIRECTORY_PREFIX, userId);
+    public static String getUserRootDirectoryPattern(Long userId) {
+        return String.format(USER_ROOT_DIR_PATTERN, userId);
     }
 
     public static String getDirectoryName(String path) {
