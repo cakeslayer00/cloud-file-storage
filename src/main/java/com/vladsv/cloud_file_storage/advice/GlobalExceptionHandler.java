@@ -77,6 +77,12 @@ public class GlobalExceptionHandler {
         return new ErrorResponseDto(e.getMessage());
     }
 
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(InvalidResourceUploadBodyException.class)
+    public ErrorResponseDto handleInvalidUploadBodyException(InvalidResourceUploadBodyException e) {
+        return new ErrorResponseDto(e.getMessage());
+    }
+
     private String mapToMessage(FieldError error) {
         return error.getField() + ": " + error.getDefaultMessage();
     }

@@ -57,7 +57,6 @@ public class PathUtils {
     public static String getPathToResource(String resource) {
         String trimmed = isDir(resource) ? resource.substring(0, resource.length() - 1) :  resource;
         int lastIndexOfSlash = trimmed.lastIndexOf("/");
-        return lastIndexOfSlash > 0 ? trimmed.substring(0, lastIndexOfSlash + 1) : trimmed;
-
+        return lastIndexOfSlash > 0 ? trimmed.substring(0, lastIndexOfSlash + 1) : "";
     }
 }

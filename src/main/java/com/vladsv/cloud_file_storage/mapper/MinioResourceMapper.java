@@ -61,7 +61,7 @@ public interface MinioResourceMapper {
         String name = lastSlash >= 0 ? trimmed.substring(lastSlash + 1) : trimmed;
         String path = lastSlash > 0 ? trimmed.substring(0, lastSlash + 1) : "/";
 
-        return new ResourceResponseDto(path.replaceFirst("^/", ""), isDir ? name + "/" : name, response.size(), isDir ? "DIRECTORY" : "FILE");
+        return new ResourceResponseDto(path.replaceFirst("^/", ""), isDir ? name + "/" : name, isDir ? null : response.size(), isDir ? "DIRECTORY" : "FILE");
     }
 
 }

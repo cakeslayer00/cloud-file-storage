@@ -34,10 +34,10 @@ public class ResourceController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ResourceResponseDto> upload(@RequestParam("path") String path,
-                                                      @RequestPart("object") MultipartFile file,
+    public ResponseEntity<List<ResourceResponseDto>> upload(@RequestParam("path") String path,
+                                                      @RequestPart("object") MultipartFile[] files,
                                                       @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.uploadResource(path, file, user.getId()));
+        return ResponseEntity.ok(resourceService.uploadResources(path, files, user.getId()));
     }
 
     @GetMapping("/download")
