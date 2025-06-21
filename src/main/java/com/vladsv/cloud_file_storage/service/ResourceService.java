@@ -23,16 +23,19 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import static utils.PathUtils.isDir;
+
 @Service
 @RequiredArgsConstructor
 public class ResourceService {
 
     private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with name '%s' doesn't exist";
-    private static final String INVALID_OR_MISSING_PATH = "There is no resource under path '%s' or it's missing";
+    private static final String INVALID_OR_MISSING_PATH = "Either source or target path is invalid or missing";
     private static final String CONFLICT_RESOURCE_UPLOAD = "Resource with name '%s' already uploaded";
     private static final String CONFLICT_RESOURCE_MANIPULATION = "Source and target resources have same path;) ";
     private static final String FORBIDDEN_RESOURCE_MANIPULATION = "Moving or renaming directory to file is forbidden";
     private static final String ROOT_DIRECTORY_REMOVAL_ATTEMPT = "You cannot delete root folder;)";
+    private static final String ROOT_DIRECTORY_MANIPULATION_ATTEMPT = "You cannot manipulate root folder;)";
 
     private final MinioRepository minioRepository;
 
@@ -59,7 +62,7 @@ public class ResourceService {
             throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
         }
 
-        if (PathUtils.isDir(path)) {
+        if (isDir(path)) {
             minioRepository.removeObjects(getDirectoryContent(root + relative, true));
         } else {
             minioRepository.removeObject(root + relative);
@@ -74,7 +77,7 @@ public class ResourceService {
             throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
         }
 
-        if (!PathUtils.isDir(relative)) {
+        if (!isDir(relative)) {
             downloadSingleFile(root + relative, response);
         } else {
             downloadDirectoryAsZip(root, relative, response);
@@ -117,55 +120,68 @@ public class ResourceService {
         }
     }
 
-    //TODO: Not right implementation
-    public ResourceResponseDto moveOrRenameResource(String source, String target, Long id) {
-        String root = PathUtils.getUserRootDirectoryPattern(id);
+    public ResourceResponseDto moveOrRenameResource(String source, String target, long userId) {
         source = PathUtils.normalizePath(source);
         target = PathUtils.normalizePath(target);
 
         if (source.equals(target)) {
-            throw new ConflictingResourceException(CONFLICT_RESOURCE_MANIPULATION);
+            throw new InvalidResourcePathException(INVALID_OR_MISSING_PATH);
         }
 
-        if (!minioRepository.isResourceExists(root + source)) {
-            throw new InvalidResourcePathException(INVALID_OR_MISSING_PATH.formatted(source));
+        boolean sourceIsDir = isDir(source);
+        boolean targetIsDir = isDir(target);
+        if (sourceIsDir != targetIsDir) {
+            throw new InvalidResourcePathException(INVALID_OR_MISSING_PATH);
         }
 
-        if (PathUtils.isDir(source)) {
-            return handleDirectoryMove(root, source, target, id);
-        }
+        String root = PathUtils.getUserRootDirectoryPattern(userId);
+        String normalizedSource = PathUtils.normalizePath(root + source);
+        String normalizedTarget = PathUtils.normalizePath(root + target);
 
-        return handleFileMove(root, source, target, id);
+        if (isSimpleRename(normalizedSource, normalizedTarget)) {
+            return renameResource(normalizedSource, normalizedTarget, userId);
+        }
+        return moveResource(normalizedSource, normalizedTarget, userId);
     }
 
-    private ResourceResponseDto handleDirectoryMove(String root, String source, String target, Long id) {
-        if (!PathUtils.isDir(target)) {
-            throw new IncompatibleResourceTransmissionException(FORBIDDEN_RESOURCE_MANIPULATION);
-        }
-        return moveDirectory(root, source, target, id);
+    private boolean isSimpleRename(String source, String target) {
+        return PathUtils.getPathToResource(source).equals(PathUtils.getPathToResource(target));
     }
 
-    private ResourceResponseDto handleFileMove(String root, String source, String target, Long id) {
-        if (PathUtils.isDir(target)) {
-            return moveFile(root + source, root + target + PathUtils.getFileName(source), id);
+    private ResourceResponseDto renameResource(String source, String target, long userId) {
+        if (!isSimpleRename(source, target)) {
+            throw new InvalidResourcePathException(INVALID_OR_MISSING_PATH);
         }
-        return moveFile(root + source, root + target, id);
+        return performMoveOperation(source, target, userId);
     }
 
-    private ResourceResponseDto moveDirectory(String root, String source, String target, Long id) {
-        List<String> sourceDirContent = getDirectoryContent(root + source, true);
+    private ResourceResponseDto moveResource(String source, String target, long userId) {
+        return performMoveOperation(source, target, userId);
+    }
 
-        sourceDirContent.forEach(path -> {
-            minioRepository.copyObject(path, root + target);
-            minioRepository.removeObject(path);
+    private ResourceResponseDto performMoveOperation(String source, String target, long userId) {
+        if (isDir(source)) {
+            moveDirectoryContents(source, target);
+        } else {
+            moveSingleFile(source, target);
+        }
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(target), userId);
+    }
+
+    private void moveDirectoryContents(String source, String target) {
+        List<String> resources = getDirectoryContent(source);
+
+        resources.forEach(resource -> {
+            String relativePath = resource.substring(source.length());
+            minioRepository.copyObject(resource, target + relativePath);
         });
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(root + target), id);
+
+        minioRepository.removeObjects(resources);
     }
 
-    private ResourceResponseDto moveFile(String source, String target, Long id) {
+    private void moveSingleFile(String source, String target) {
         minioRepository.copyObject(source, target);
         minioRepository.removeObject(source);
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(target), id);
     }
 
     public ResourceResponseDto uploadResource(String path, MultipartFile file, Long id) {
