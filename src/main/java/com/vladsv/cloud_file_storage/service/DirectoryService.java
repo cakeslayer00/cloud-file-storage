@@ -64,7 +64,7 @@ public class DirectoryService {
         Iterable<Result<Item>> iterable = minioRepository.listObjects(absolutePath);
         Stream<Item> ItemsStream = StreamSupport.stream(iterable.spliterator(), false).map(this::unwrapResult);
         return ItemsStream
-                .filter(item -> !isRootDirectory(item, rootDirectory))
+                .filter(item -> !isFolderMetadata(item, absolutePath))
                 .map(item -> MinioResourceMapper.INSTANCE.toResourceDto(item, userId))
                 .collect(Collectors.toList());
     }
@@ -79,8 +79,8 @@ public class DirectoryService {
         }
     }
 
-    private boolean isRootDirectory(Item resource, String rootDirectory) {
-        return resource.objectName().equals(rootDirectory);
+    private boolean isFolderMetadata(Item resource, String path) {
+        return resource.objectName().equals(path);
     }
 
 }

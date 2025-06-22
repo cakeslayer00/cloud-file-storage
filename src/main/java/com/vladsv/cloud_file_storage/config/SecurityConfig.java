@@ -2,7 +2,6 @@ package com.vladsv.cloud_file_storage.config;
 
 import com.vladsv.cloud_file_storage.repository.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;

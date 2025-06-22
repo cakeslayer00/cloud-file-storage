@@ -40,6 +40,7 @@ public interface MinioResourceMapper {
         }
 
         String relativePath = response.object().substring(PathUtils.getUserRootDirectoryPattern(id).length());
+        relativePath = relativePath.isEmpty() ? "/" : relativePath;
 
         String path = PathUtils.getPathToResource(relativePath);
         String name = PathUtils.getResourceNameFromPath(relativePath);

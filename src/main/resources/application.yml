@@ -1,31 +1,41 @@
+
+
 spring:
   liquibase:
     enabled: true
+
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://localhost:5432/db-dev
     username: root
     password: password
+
   jpa:
     hibernate:
       ddl-auto: none
+
   application:
     name: cloud-file-storage
+
   mvc:
     log-resolved-exception: false
+
   servlet:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+
   data:
     redis:
       host: localhost
       port: 6379
       password: password
+
   session:
     timeout: 3600
+
   minio:
     endpoint: http://127.0.0.1:9000 #MINIO_ENDPOINT
-    access_key: LuWR4HMaMwZugfkYhwVW #MINIO_ACCESS_KEY
-    secret_key: cGrBQJwEYXVcg1kGIKOyUbKnlz0ZXGJkyLtxNtbY #MINIO_SECRET_KEY
+    access_key: JTpGn0KL6Fe0yDKKZUsv #MINIO_ACCESS_KEY
+    secret_key: QXHuDuXVJyOsDQ29gtQNIx0tsgZCZC62cUxvDIWq #MINIO_SECRET_KEY
     bucket_name: user-files
