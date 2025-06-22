@@ -21,6 +21,9 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -30,61 +33,63 @@ import static utils.PathUtils.isDir;
 @RequiredArgsConstructor
 public class ResourceService {
 
-    private static final String RESOURCE_DOES_NOT_EXISTS = "Resource with name '%s' doesn't exist";
+    private static final String RESOURCE_DOES_NOT_EXISTS = "Resource under path '%s' doesn't exist";
     private static final String INVALID_SOURCE_OR_TARGET_PATH = "Either source or target path is invalid or missing";
-    private static final String CONFLICT_RESOURCE_UPLOAD = "Resource with name '%s' already uploaded";
     private static final String ROOT_DIRECTORY_REMOVAL_ATTEMPT = "You cannot delete root folder;)";
-    public static final String FILE_ALREADY_EXISTS_DURING_UPLOAD = "File '%s' already in destination folder";
-    public static final String NO_FILES_PROVIDED_FOR_UPLOAD = "No files provided for upload";
+    private static final String FILE_ALREADY_EXISTS_DURING_UPLOAD = "File '%s' already in destination folder";
+    private static final String NO_FILES_PROVIDED_FOR_UPLOAD = "No files provided for upload";
 
     private final MinioRepository minioRepository;
 
     public ResourceResponseDto getResource(String path, Long id) {
-        String root = PathUtils.getUserRootDirectoryPattern(id);
-        String relative = PathUtils.normalizePath(path);
+        String rootDirectory = PathUtils.getUserRootDirectoryPattern(id);
+        String relativePath = PathUtils.normalizePath(path);
+        String absolutePath = rootDirectory + relativePath;
 
-        if (!minioRepository.isResourceExists(root + relative)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
+        if (!minioRepository.isResourceExists(absolutePath)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relativePath));
         }
 
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(root + relative), id);
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(absolutePath), id);
     }
 
     public void deleteResource(String path, Long id) {
-        String root = PathUtils.getUserRootDirectoryPattern(id);
-        String relative = PathUtils.normalizePath(path);
+        String rootDirectory = PathUtils.getUserRootDirectoryPattern(id);
+        String relativePath = PathUtils.normalizePath(path);
+        String absolutePath = rootDirectory + relativePath;
 
-        if (relative.isEmpty()) {
+        if (absolutePath.equals(rootDirectory)) {
             throw new InvalidResourcePathException(ROOT_DIRECTORY_REMOVAL_ATTEMPT);
         }
 
-        if (!minioRepository.isResourceExists(root + relative)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
+        if (!minioRepository.isResourceExists(absolutePath)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relativePath));
         }
 
         if (isDir(path)) {
-            minioRepository.removeObjects(getDirectoryContent(root + relative, true));
+            minioRepository.removeObjects(getDirectoryContent(absolutePath, true));
         } else {
-            minioRepository.removeObject(root + relative);
+            minioRepository.removeObject(absolutePath);
         }
     }
 
     public void downloadResource(String path, Long id, HttpServletResponse response) {
-        String root = PathUtils.getUserRootDirectoryPattern(id);
-        String relative = PathUtils.normalizePath(path);
+        String rootDirectory = PathUtils.getUserRootDirectoryPattern(id);
+        String relativePath = PathUtils.normalizePath(path);
+        String absolutePath = rootDirectory + relativePath;
 
-        if (!minioRepository.isResourceExists(root + relative)) {
-            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
+        if (!minioRepository.isResourceExists(absolutePath)) {
+            throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relativePath));
         }
 
-        if (!isDir(relative)) {
-            downloadSingleFile(root + relative, response);
+        if (!isDir(relativePath)) {
+            downloadSingleFile(absolutePath, response);
         } else {
-            downloadDirectoryAsZip(root, relative, response);
+            downloadDirectoryAsZip(absolutePath, response);
         }
 
         response.setContentType("application/octet-stream");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + relative + "\"");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + relativePath + "\"");
     }
 
     private void downloadSingleFile(String path, HttpServletResponse response) {
@@ -95,15 +100,15 @@ public class ResourceService {
         }
     }
 
-    private void downloadDirectoryAsZip(String root, String relative, HttpServletResponse response) {
+    private void downloadDirectoryAsZip(String path, HttpServletResponse response) {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(response.getOutputStream())) {
-            List<String> resources = getDirectoryContent(root + relative, true);
+            List<String> resources = getDirectoryContent(path, true);
 
             for (String resource : resources) {
-                if (resource.endsWith(relative)) {
+                if (resource.equals(path)) {
                     continue;
                 }
-                addFileToZip(root + relative, resource, zipOutputStream);
+                addFileToZip(path, resource, zipOutputStream);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -262,20 +267,20 @@ public class ResourceService {
         return getDirectoryContent(path, false);
     }
 
-    private List<String> getDirectoryContent(String path, boolean recursive) {
-        Iterable<Result<Item>> results = minioRepository.listObjects(path, recursive);
-        List<String> resources = new ArrayList<>();
-        results.forEach(result -> {
-            try {
-                String resultingPath = result.get().objectName();
-                resources.add(resultingPath);
-            } catch (ErrorResponseException | InsufficientDataException | InternalException |
-                     InvalidKeyException | InvalidResponseException | IOException |
-                     NoSuchAlgorithmException | ServerException | XmlParserException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        return resources;
+    private List<String> getDirectoryContent(String absolutePath, boolean recursive) {
+        Iterable<Result<Item>> iterable = minioRepository.listObjects(absolutePath, recursive);
+        Stream<Item> ItemsStream = StreamSupport.stream(iterable.spliterator(), false).map(this::unwrapResult);
+        return ItemsStream.map(Item::objectName).collect(Collectors.toList());
+    }
+
+    private Item unwrapResult(Result<Item> itemResult) {
+        try {
+            return itemResult.get();
+        } catch (ErrorResponseException | InvalidKeyException | InvalidResponseException |
+                 IOException | NoSuchAlgorithmException | ServerException |
+                 XmlParserException | InternalException | InsufficientDataException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
