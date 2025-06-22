@@ -35,7 +35,7 @@ public class ResourceController {
         resourceService.deleteResource(path, user.getId());
     }
 
-    @ResponseStatus(HttpStatus.OK)
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE}, produces = MediaType.APPLICATION_JSON_VALUE)
     public List<ResourceResponseDto> upload(@RequestParam("path") String path,
                                             @RequestPart("object") MultipartFile[] files,
