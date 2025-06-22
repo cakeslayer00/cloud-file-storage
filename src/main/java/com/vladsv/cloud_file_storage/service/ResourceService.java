@@ -36,7 +36,7 @@ public class ResourceService {
     private static final String RESOURCE_DOES_NOT_EXISTS = "Resource under path '%s' doesn't exist";
     private static final String INVALID_SOURCE_OR_TARGET_PATH = "Either source or target path is invalid or missing";
     private static final String ROOT_DIRECTORY_REMOVAL_ATTEMPT = "You cannot delete root folder;)";
-    private static final String FILE_ALREADY_EXISTS_DURING_UPLOAD = "File '%s' already in destination folder";
+    private static final String RESOURCE_ALREADY_EXISTS_DURING_UPLOAD = "Resource '%s' already in destination folder";
     private static final String NO_FILES_PROVIDED_FOR_UPLOAD = "No files provided for upload";
 
     private final MinioRepository minioRepository;
@@ -139,18 +139,18 @@ public class ResourceService {
             throw new InvalidResourcePathException(INVALID_SOURCE_OR_TARGET_PATH);
         }
 
-        String root = PathUtils.getUserRootDirectoryPattern(userId);
-        String normalizedSource = PathUtils.normalizePath(root + source);
-        String normalizedTarget = PathUtils.normalizePath(root + target);
+        String rootDirectory = PathUtils.getUserRootDirectoryPattern(userId);
+        String absoluteSource = PathUtils.normalizePath(rootDirectory + source);
+        String absoluteTarget = PathUtils.normalizePath(rootDirectory + target);
 
-        if (!minioRepository.isResourceExists(normalizedSource)) {
+        if (!minioRepository.isResourceExists(absoluteSource)) {
             throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(source));
         }
 
-        if (isSimpleRename(normalizedSource, normalizedTarget)) {
-            return renameResource(normalizedSource, normalizedTarget, userId);
+        if (isSimpleRename(absoluteSource, absoluteTarget)) {
+            return renameResource(absoluteSource, absoluteTarget, userId);
         }
-        return moveResource(normalizedSource, normalizedTarget, userId);
+        return moveResource(absoluteSource, absoluteTarget, userId);
     }
 
     private boolean isSimpleRename(String source, String target) {
@@ -198,12 +198,12 @@ public class ResourceService {
             throw new InvalidResourceUploadBodyException(NO_FILES_PROVIDED_FOR_UPLOAD);
         }
 
-        String rootPrefix = PathUtils.getUserRootDirectoryPattern(id);
-        String normalized = PathUtils.normalizePath(path);
-        String relativePath = rootPrefix + normalized;
+        String rootDirectory = PathUtils.getUserRootDirectoryPattern(id);
+        String relativePath = PathUtils.normalizePath(path);
+        String absolutePath = rootDirectory + relativePath;
 
         return Arrays.stream(files)
-                .map(file -> uploadSingleFile(relativePath, file, id))
+                .map(file -> uploadSingleFile(absolutePath, file, id))
                 .toList();
 
     }
@@ -212,7 +212,7 @@ public class ResourceService {
         String absolute = path + file.getOriginalFilename();
         if (minioRepository.isResourceExists(absolute)) {
             throw new InvalidResourcePathException(
-                    FILE_ALREADY_EXISTS_DURING_UPLOAD.formatted(file.getOriginalFilename()));
+                    RESOURCE_ALREADY_EXISTS_DURING_UPLOAD.formatted(file.getOriginalFilename()));
         }
         createParentDirectoriesIfNeeded(path, file.getOriginalFilename());
 
@@ -241,26 +241,18 @@ public class ResourceService {
         }
     }
 
-    public List<ResourceResponseDto> search(String query, Long id) {
-        String rootPrefix = PathUtils.getUserRootDirectoryPattern(id);
-        String path = PathUtils.getPathToResource(query);
-        String relativePath = rootPrefix + PathUtils.normalizePath(path);
+    public List<ResourceResponseDto> search(String query, Long userId) {
+        String rootDirectory = PathUtils.getUserRootDirectoryPattern(userId);
+        String relativePath = PathUtils.getPathToResource(query);
+        String absolutePath = rootDirectory + PathUtils.normalizePath(relativePath);
 
-        Iterable<Result<Item>> results = minioRepository.listObjects(relativePath);
-        List<ResourceResponseDto> resources = new ArrayList<>();
-        results.forEach(result -> {
-            try {
-                String file = result.get().objectName().substring(rootPrefix.length());
-                if (file.contains(query)) {
-                    resources.add(MinioResourceMapper.INSTANCE.toResourceDto(result.get(), id));
-                }
-            } catch (ErrorResponseException | InsufficientDataException | InternalException |
-                     InvalidKeyException | InvalidResponseException | IOException |
-                     NoSuchAlgorithmException | ServerException | XmlParserException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        return resources;
+        Iterable<Result<Item>> iterable = minioRepository.listObjects(absolutePath, true);
+        Stream<Item> ItemsStream = StreamSupport.stream(iterable.spliterator(), false).map(this::unwrapResult);
+
+        return ItemsStream
+                .filter(item -> item.objectName().substring(rootDirectory.length()).contains(query))
+                .map(item -> MinioResourceMapper.INSTANCE.toResourceDto(item, userId))
+                .toList();
     }
 
     private List<String> getDirectoryContent(String path) {
