@@ -5,6 +5,7 @@ import com.vladsv.cloud_file_storage.entity.User;
 import com.vladsv.cloud_file_storage.service.ResourceService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,45 +21,49 @@ public class ResourceController {
 
     private final ResourceService resourceService;
 
+    @ResponseStatus(HttpStatus.OK)
     @GetMapping
-    public ResponseEntity<ResourceResponseDto> get(@RequestParam("path") String path,
-                                                   @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.getResource(path, user.getId()));
+    public ResourceResponseDto get(@RequestParam("path") String path,
+                                   @AuthenticationPrincipal User user) {
+        return resourceService.getResource(path, user.getId());
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping
-    public ResponseEntity<Void> delete(@RequestParam("path") String path,
-                                       @AuthenticationPrincipal User user) {
+    public void delete(@RequestParam("path") String path,
+                       @AuthenticationPrincipal User user) {
         resourceService.deleteResource(path, user.getId());
-        return ResponseEntity.noContent().build();
     }
 
-    @PostMapping()
-    public ResponseEntity<List<ResourceResponseDto>> upload(@RequestParam("path") String path,
-                                                      @RequestPart("object") MultipartFile[] files,
-                                                      @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.uploadResources(path, files, user.getId()));
+    @ResponseStatus(HttpStatus.OK)
+    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE}, produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<ResourceResponseDto> upload(@RequestParam("path") String path,
+                                            @RequestPart("object") MultipartFile[] files,
+                                            @AuthenticationPrincipal User user) {
+        return resourceService.uploadResources(path, files, user.getId());
     }
 
+    @ResponseStatus(HttpStatus.OK)
     @GetMapping("/download")
-    public ResponseEntity<Void> download(@RequestParam("path") String path,
-                                         @AuthenticationPrincipal User user,
-                                         HttpServletResponse response) {
+    public void download(@RequestParam("path") String path,
+                         @AuthenticationPrincipal User user,
+                         HttpServletResponse response) {
         resourceService.downloadResource(path, user.getId(), response);
-        return ResponseEntity.ok().build();
     }
 
+    @ResponseStatus(HttpStatus.OK)
     @GetMapping("/move")
-    public ResponseEntity<ResourceResponseDto> move(@RequestParam("from") String from,
-                                                    @RequestParam("to") String to,
-                                                    @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.moveOrRenameResource(from, to, user.getId()));
+    public ResourceResponseDto move(@RequestParam("from") String from,
+                                    @RequestParam("to") String to,
+                                    @AuthenticationPrincipal User user) {
+        return resourceService.moveOrRenameResource(from, to, user.getId());
     }
 
+    @ResponseStatus(HttpStatus.OK)
     @GetMapping("/search")
-    public ResponseEntity<List<ResourceResponseDto>> search(@RequestParam("query") String query,
-                                                            @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.search(query, user.getId()));
+    public List<ResourceResponseDto> search(@RequestParam("query") String query,
+                                            @AuthenticationPrincipal User user) {
+        return resourceService.search(query, user.getId());
     }
 
 }

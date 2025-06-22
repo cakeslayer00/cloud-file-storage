@@ -4,6 +4,7 @@ import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
 import com.vladsv.cloud_file_storage.entity.User;
 import com.vladsv.cloud_file_storage.service.DirectoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -17,16 +18,18 @@ public class DirectoryController {
 
     private final DirectoryService directoryService;
 
+    @ResponseStatus(HttpStatus.OK)
     @GetMapping
-    public ResponseEntity<List<ResourceResponseDto>> getDirectoryContent(@RequestParam("path") String path,
+    public List<ResourceResponseDto> getDirectoryContent(@RequestParam("path") String path,
                                                                          @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(directoryService.getDirectoryContent(path, user.getId()));
+        return directoryService.getDirectoryContent(path, user.getId());
     }
 
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
-    public ResponseEntity<ResourceResponseDto> createDirectory(@RequestParam("path") String path,
+    public ResourceResponseDto createDirectory(@RequestParam("path") String path,
                                                                @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(directoryService.createEmptyDirectory(path, user.getId()));
+        return directoryService.createEmptyDirectory(path, user.getId());
     }
 
 }

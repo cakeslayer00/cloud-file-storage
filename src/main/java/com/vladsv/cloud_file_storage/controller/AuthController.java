@@ -9,10 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -21,19 +18,20 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/sign-up")
-    public ResponseEntity<UserResponseDto> signUp(@RequestBody @Valid UserRequestDto userRequestDto,
+    public UserResponseDto signUp(@RequestBody @Valid UserRequestDto userRequestDto,
                                                   HttpServletRequest request,
                                                   HttpServletResponse response) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(authService.register(userRequestDto, request, response));
+        return authService.register(userRequestDto, request, response);
     }
 
+    @ResponseStatus(HttpStatus.OK)
     @PostMapping("/sign-in")
-    public ResponseEntity<UserResponseDto> signIn(@RequestBody @Valid UserRequestDto userRequestDto,
+    public UserResponseDto signIn(@RequestBody @Valid UserRequestDto userRequestDto,
                                                   HttpServletRequest request,
                                                   HttpServletResponse response) {
-        return ResponseEntity.ok(authService.authenticate(userRequestDto, request, response));
+        return authService.authenticate(userRequestDto, request, response);
     }
 
 }

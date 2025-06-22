@@ -18,8 +18,8 @@ public class UserController {
 
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/me")
-    public ResponseEntity<UserResponseDto> getAuthenticatedUser(Authentication authentication, HttpSession session) {
-        return ResponseEntity.ok(new UserResponseDto(authentication.getName()));
+    public UserResponseDto getAuthenticatedUser(Authentication authentication, HttpSession session) {
+        return new UserResponseDto(authentication.getName());
     }
 
 }
