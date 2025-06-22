@@ -2,6 +2,7 @@ package com.vladsv.cloud_file_storage.config;
 
 import com.vladsv.cloud_file_storage.repository.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -15,14 +16,16 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -35,22 +38,18 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(configurer ->
-                        configurer.authenticationEntryPoint((request, response, authException)
-                                -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
-                .sessionManagement((session) -> {
-                    session.maximumSessions(1);
-                    session.invalidSessionUrl("/api/auth/sign-in");
-                })
+                        configurer.authenticationEntryPoint(authenticationEntryPoint()))
                 .securityContext(securityContext ->
-                        securityContext.requireExplicitSave(true))
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors((cors) -> cors.configurationSource(corsConfigurationSource()))
+                        securityContext.securityContextRepository(securityContextRepository())
+                )
                 .logout(logout -> logout
-                        .deleteCookies("SESSION")
                         .logoutUrl("/api/auth/sign-out")
-                        .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT)));
+                        .logoutSuccessUrl("/api/auth/sign-in")
+                        .logoutSuccessHandler(onLogout()))
+                .httpBasic(Customizer.withDefaults())
+                .cors((cors) -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(AbstractHttpConfigurer::disable);
 
 
         return http.build();
@@ -59,23 +58,14 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://localhost:81");
-        configuration.addAllowedMethod("*");
-        configuration.addAllowedHeader("*");
+        configuration.addAllowedOrigin("http://localhost");
+        configuration.setAllowedMethods(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
-    }
-
-    @Bean
-    public HttpSessionEventPublisher httpSessionEventPublisher() {
-        return new HttpSessionEventPublisher();
-    }
-
-    @Bean
-    public SecurityContextRepository securityContextRepository() {
-        return new HttpSessionSecurityContextRepository();
     }
 
     @Bean
@@ -90,6 +80,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    public SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
     public UserDetailsService userDetailsService(UserRepository userRepository) {
         return new CustomUserDetailsService(userRepository);
     }
@@ -97,6 +92,16 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    private AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, authException)
+                -> response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    private LogoutSuccessHandler onLogout() {
+        return (request, response, authentication) ->
+                response.setStatus(HttpStatus.NO_CONTENT.value());
     }
 
 }

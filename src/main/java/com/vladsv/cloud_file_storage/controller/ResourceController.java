@@ -33,7 +33,7 @@ public class ResourceController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping()
     public ResponseEntity<List<ResourceResponseDto>> upload(@RequestParam("path") String path,
                                                       @RequestPart("object") MultipartFile[] files,
                                                       @AuthenticationPrincipal User user) {
@@ -58,7 +58,7 @@ public class ResourceController {
     @GetMapping("/search")
     public ResponseEntity<List<ResourceResponseDto>> search(@RequestParam("query") String query,
                                                             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(resourceService.searchFromRoot(query, user.getId()));
+        return ResponseEntity.ok(resourceService.search(query, user.getId()));
     }
 
 }

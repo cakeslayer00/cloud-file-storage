@@ -13,36 +13,25 @@ import java.io.IOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
+import static utils.PathUtils.isDir;
+
 @Mapper
 public interface MinioResourceMapper {
 
     MinioResourceMapper INSTANCE = Mappers.getMapper(MinioResourceMapper.class);
 
-    default ResourceResponseDto toResourceDto(Result<Item> result, Long id) {
-        try {
-            if (result == null) {
-                return null;
-            }
-
-            Item item = result.get();
-
-            String relative = item.objectName().substring(PathUtils.getUserRootDirectoryPattern(id).length());
-
-            boolean isDir = relative.endsWith("/");
-            String trimmed = isDir
-                    ? relative.substring(0, relative.length() - 1)
-                    : relative;
-
-            int lastSlash = trimmed.lastIndexOf("/");
-            String name = lastSlash >= 0 ? trimmed.substring(lastSlash + 1) : trimmed;
-            String path = lastSlash > 0 ? trimmed.substring(0, lastSlash + 1) : "/";
-
-            return new ResourceResponseDto(path, isDir ? name + "/" : name, item.size(), isDir ? "DIRECTORY" : "FILE");
-        } catch (ErrorResponseException | InsufficientDataException | InternalException |
-                 InvalidKeyException | InvalidResponseException | IOException |
-                 NoSuchAlgorithmException | ServerException | XmlParserException e) {
-            throw new RuntimeException(e);
+    default ResourceResponseDto toResourceDto(Item item, Long userId) {
+        if (item == null) {
+            return null;
         }
+        String relativePath = item.objectName().substring(PathUtils.getUserRootDirectoryPattern(userId).length());
+
+        String path = PathUtils.getPathToResource(relativePath);
+        String name = PathUtils.getResourceNameFromPath(relativePath);
+        Long size = item.isDir() ? null : item.size();
+        String type = item.isDir() ? "DIRECTORY" : "FILE";
+
+        return new ResourceResponseDto(path, name, size, type);
     }
 
     default ResourceResponseDto toResourceDto(StatObjectResponse response, Long id) {
@@ -50,18 +39,14 @@ public interface MinioResourceMapper {
             return null;
         }
 
-        String relative = response.object().substring(PathUtils.getUserRootDirectoryPatternWithNoSlash(id).length());
+        String relativePath = response.object().substring(PathUtils.getUserRootDirectoryPattern(id).length());
 
-        boolean isDir = relative.endsWith("/");
-        String trimmed = isDir
-                ? relative.substring(0, relative.length() - 1)
-                : relative;
+        String path = PathUtils.getPathToResource(relativePath);
+        String name = PathUtils.getResourceNameFromPath(relativePath);
+        Long size = isDir(relativePath) ? null : response.size();
+        String type = isDir(relativePath) ? "DIRECTORY" : "FILE";
 
-        int lastSlash = trimmed.lastIndexOf("/");
-        String name = lastSlash >= 0 ? trimmed.substring(lastSlash + 1) : trimmed;
-        String path = lastSlash > 0 ? trimmed.substring(0, lastSlash + 1) : "/";
-
-        return new ResourceResponseDto(path.replaceFirst("^/", ""), isDir ? name + "/" : name, isDir ? null : response.size(), isDir ? "DIRECTORY" : "FILE");
+        return new ResourceResponseDto(path, name, size, type);
     }
 
 }

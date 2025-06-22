@@ -48,20 +48,14 @@ public class GlobalExceptionHandler {
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)
-    @ExceptionHandler(DirectoryAlreadyExistsException.class)
-    public ErrorResponseDto handleFolderAlreadyExists(DirectoryAlreadyExistsException e) {
+    @ExceptionHandler(ResourceAlreadyExistsException.class)
+    public ErrorResponseDto handleFolderAlreadyExists(ResourceAlreadyExistsException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(ResourceDoesNotExistsException.class)
     public ErrorResponseDto handleResourceDoesNotExists(ResourceDoesNotExistsException e) {
-        return new ErrorResponseDto(e.getMessage());
-    }
-
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    @ExceptionHandler(DirectoryDoesNotExistsException.class)
-    public ErrorResponseDto handleDirectoryDoesNotExists(DirectoryDoesNotExistsException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 

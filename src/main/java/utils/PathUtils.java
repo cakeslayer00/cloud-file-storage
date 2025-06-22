@@ -43,20 +43,20 @@ public class PathUtils {
         return USER_ROOT_DIR_PATTERN.formatted(userId);
     }
 
-    public static String getResourceName(String resource) {
+    public static String getResourceNameFromPath(String resource) {
         String trimmed = isDir(resource) ? resource.substring(0, resource.length() - 1) :  resource;
         int lastIndexOfSlash = trimmed.lastIndexOf("/");
         String name = lastIndexOfSlash >= 0 ? trimmed.substring(lastIndexOfSlash + 1) : trimmed;
         return isDir(resource) ? name + "/" : name;
     }
 
-    public static boolean isDir(String path) {
-        return path.endsWith("/");
-    }
-
     public static String getPathToResource(String resource) {
         String trimmed = isDir(resource) ? resource.substring(0, resource.length() - 1) :  resource;
         int lastIndexOfSlash = trimmed.lastIndexOf("/");
-        return lastIndexOfSlash > 0 ? trimmed.substring(0, lastIndexOfSlash + 1) : "";
+        return lastIndexOfSlash > 0 ? trimmed.substring(0, lastIndexOfSlash + 1) : "/";
+    }
+
+    public static boolean isDir(String path) {
+        return path.endsWith("/");
     }
 }

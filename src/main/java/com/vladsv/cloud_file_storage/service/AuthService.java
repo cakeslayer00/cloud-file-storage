@@ -32,8 +32,9 @@ public class AuthService {
     private static final String USER_NOT_FOUND = "Username not found, try again!";
     private static final String INVALID_PASSWORD = "Invalid password, try again!";
 
-    private final SecurityContextRepository securityContextRepository;
     private final AuthenticationManager authenticationManager;
+    private final SecurityContextRepository securityContextRepository;
+
     private final PasswordEncoder passwordEncoder;
 
     private final DirectoryService minioRepository;
@@ -55,7 +56,7 @@ public class AuthService {
 
         userRepository.saveAndFlush(user);
 
-        setupSecurityContextExplicitly(userRequestDto, request, response);
+        commenceSecurityContextExplicitly(userRequestDto, request, response);
         minioRepository.createRootDirectory(USER_ROOT_DIR_PATTERN.formatted(user.getId()));
 
         return UserMapper.INSTANCE.toDto(user);
@@ -72,13 +73,13 @@ public class AuthService {
             throw new InvalidPasswordException(INVALID_PASSWORD);
         }
 
-        setupSecurityContextExplicitly(userRequestDto, request, response);
+        commenceSecurityContextExplicitly(userRequestDto, request, response);
         return UserMapper.INSTANCE.toDto(user);
     }
 
-    private void setupSecurityContextExplicitly(UserRequestDto userRequestDto,
-                                                HttpServletRequest request,
-                                                HttpServletResponse response) {
+    private void commenceSecurityContextExplicitly(UserRequestDto userRequestDto,
+                                                   HttpServletRequest request,
+                                                   HttpServletResponse response) {
         UsernamePasswordAuthenticationToken token = UsernamePasswordAuthenticationToken.unauthenticated(
                 userRequestDto.username(), userRequestDto.password());
         Authentication authentication = authenticationManager.authenticate(token);

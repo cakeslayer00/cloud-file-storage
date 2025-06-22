@@ -47,7 +47,7 @@ public class ResourceService {
             throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(relative));
         }
 
-        return getResourceResponseDto(id, root + relative);
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(root + relative), id);
     }
 
     public void deleteResource(String path, Long id) {
@@ -169,7 +169,7 @@ public class ResourceService {
         } else {
             moveSingleFile(source, target);
         }
-        return getResourceResponseDto(userId, target);
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(target), userId);
     }
 
     private void moveDirectoryContents(String source, String target) {
@@ -212,13 +212,13 @@ public class ResourceService {
         createParentDirectoriesIfNeeded(path, file.getOriginalFilename());
 
         minioRepository.putObject(absolute, file);
-        return getResourceResponseDto(id, absolute);
+        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(absolute), id);
     }
 
     private void createParentDirectoriesIfNeeded(String path, String relativeFilePath) {
         String pathToFile = PathUtils.getPathToResource(relativeFilePath);
 
-        if (!pathToFile.contains("/")) {
+        if (!pathToFile.contains("/") || pathToFile.startsWith("/")) {
             return;
         }
 
@@ -236,25 +236,18 @@ public class ResourceService {
         }
     }
 
-    public List<ResourceResponseDto> searchFromPrefix(String query, Long id) {
-        query = PathUtils.getValidRootResourcePath(query, id);
+    public List<ResourceResponseDto> search(String query, Long id) {
+        String rootPrefix = PathUtils.getUserRootDirectoryPattern(id);
+        String path = PathUtils.getPathToResource(query);
+        String relativePath = rootPrefix + PathUtils.normalizePath(path);
 
-        Iterable<Result<Item>> results = minioRepository.listObjects(query);
-        List<ResourceResponseDto> resources = new ArrayList<>();
-        results.forEach(result -> resources.add(MinioResourceMapper.INSTANCE.toResourceDto(result, id)));
-        return resources;
-    }
-
-    public List<ResourceResponseDto> searchFromRoot(String query, Long id) {
-        String userRootPrefix = PathUtils.getUserRootDirectoryPattern(id);
-
-        Iterable<Result<Item>> results = minioRepository.listObjects(userRootPrefix);
+        Iterable<Result<Item>> results = minioRepository.listObjects(relativePath);
         List<ResourceResponseDto> resources = new ArrayList<>();
         results.forEach(result -> {
             try {
-                String substring = result.get().objectName().substring(userRootPrefix.length());
-                if (substring.contains(query)) {
-                    resources.add(MinioResourceMapper.INSTANCE.toResourceDto(result, id));
+                String file = result.get().objectName().substring(rootPrefix.length());
+                if (file.contains(query)) {
+                    resources.add(MinioResourceMapper.INSTANCE.toResourceDto(result.get(), id));
                 }
             } catch (ErrorResponseException | InsufficientDataException | InternalException |
                      InvalidKeyException | InvalidResponseException | IOException |
@@ -283,10 +276,6 @@ public class ResourceService {
             }
         });
         return resources;
-    }
-
-    private ResourceResponseDto getResourceResponseDto(Long id, String absolute) {
-        return MinioResourceMapper.INSTANCE.toResourceDto(minioRepository.statObject(absolute), id);
     }
 
 }
