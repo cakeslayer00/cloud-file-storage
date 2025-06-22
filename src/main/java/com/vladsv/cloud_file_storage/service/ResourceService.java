@@ -3,6 +3,7 @@ package com.vladsv.cloud_file_storage.service;
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
 import com.vladsv.cloud_file_storage.exception.InvalidResourcePathException;
 import com.vladsv.cloud_file_storage.exception.InvalidResourceUploadBodyException;
+import com.vladsv.cloud_file_storage.exception.ResourceAlreadyExistsException;
 import com.vladsv.cloud_file_storage.exception.ResourceDoesNotExistsException;
 import com.vladsv.cloud_file_storage.mapper.MinioResourceMapper;
 import com.vladsv.cloud_file_storage.repository.MinioRepository;
@@ -35,9 +36,9 @@ import static utils.PathUtils.isDir;
 public class ResourceService {
 
     private static final String RESOURCE_DOES_NOT_EXISTS = "Resource under path '%s' doesn't exist";
+    private static final String RESOURCE_ALREADY_EXISTS = "Resource '%s' already in destination folder";
     private static final String INVALID_SOURCE_OR_TARGET_PATH = "Either source or target path is invalid or missing";
     private static final String ROOT_DIRECTORY_REMOVAL_ATTEMPT = "You cannot delete root folder;)";
-    private static final String RESOURCE_ALREADY_EXISTS_DURING_UPLOAD = "Resource '%s' already in destination folder";
     private static final String NO_FILES_PROVIDED_FOR_UPLOAD = "No files provided for upload";
 
     private final MinioRepository minioRepository;
@@ -113,6 +114,10 @@ public class ResourceService {
 
         if (!minioRepository.isResourceExists(absoluteSource)) {
             throw new ResourceDoesNotExistsException(RESOURCE_DOES_NOT_EXISTS.formatted(source));
+        }
+
+        if (minioRepository.isResourceExists(absoluteTarget)) {
+            throw new ResourceAlreadyExistsException(RESOURCE_ALREADY_EXISTS.formatted(target));
         }
 
         if (isSimpleRename(absoluteSource, absoluteTarget)) {
@@ -225,7 +230,7 @@ public class ResourceService {
         String absolute = path + file.getOriginalFilename();
         if (minioRepository.isResourceExists(absolute)) {
             throw new InvalidResourcePathException(
-                    RESOURCE_ALREADY_EXISTS_DURING_UPLOAD.formatted(file.getOriginalFilename()));
+                    RESOURCE_ALREADY_EXISTS.formatted(file.getOriginalFilename()));
         }
         createParentDirectoriesIfNeeded(path, file.getOriginalFilename());
 
