@@ -4,8 +4,8 @@ import com.vladsv.cloud_file_storage.dto.UserRequestDto;
 import com.vladsv.cloud_file_storage.dto.UserResponseDto;
 import com.vladsv.cloud_file_storage.entity.User;
 import com.vladsv.cloud_file_storage.exception.InvalidPasswordException;
-import com.vladsv.cloud_file_storage.exception.UsernameAlreadyTakenException;
 import com.vladsv.cloud_file_storage.exception.UserNotFoundException;
+import com.vladsv.cloud_file_storage.exception.UsernameAlreadyTakenException;
 import com.vladsv.cloud_file_storage.mapper.UserMapper;
 import com.vladsv.cloud_file_storage.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,7 +37,7 @@ public class AuthService {
 
     private final PasswordEncoder passwordEncoder;
 
-    private final DirectoryService minioRepository;
+    private final DirectoryService directoryService;
 
     private final UserRepository userRepository;
 
@@ -57,7 +57,7 @@ public class AuthService {
         userRepository.saveAndFlush(user);
 
         commenceSecurityContextExplicitly(userRequestDto, request, response);
-        minioRepository.createRootDirectory(USER_ROOT_DIR_PATTERN.formatted(user.getId()));
+        directoryService.createRootDirectory(USER_ROOT_DIR_PATTERN.formatted(user.getId()));
 
         return UserMapper.INSTANCE.toDto(user);
     }
@@ -84,11 +84,11 @@ public class AuthService {
                 userRequestDto.username(), userRequestDto.password());
         Authentication authentication = authenticationManager.authenticate(token);
 
-        SecurityContextHolderStrategy securityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
-        SecurityContext context = securityContextHolderStrategy.createEmptyContext();
+        SecurityContextHolderStrategy contextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
+        SecurityContext context = contextHolderStrategy.createEmptyContext();
         context.setAuthentication(authentication);
 
-        securityContextHolderStrategy.setContext(context);
+        contextHolderStrategy.setContext(context);
         securityContextRepository.saveContext(context, request, response);
     }
 

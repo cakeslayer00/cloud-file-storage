@@ -21,16 +21,16 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/sign-up")
     public UserResponseDto signUp(@RequestBody @Valid UserRequestDto userRequestDto,
-                                                  HttpServletRequest request,
-                                                  HttpServletResponse response) {
+                                  HttpServletRequest request,
+                                  HttpServletResponse response) {
         return authService.register(userRequestDto, request, response);
     }
 
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/sign-in")
     public UserResponseDto signIn(@RequestBody @Valid UserRequestDto userRequestDto,
-                                                  HttpServletRequest request,
-                                                  HttpServletResponse response) {
+                                  HttpServletRequest request,
+                                  HttpServletResponse response) {
         return authService.authenticate(userRequestDto, request, response);
     }
 

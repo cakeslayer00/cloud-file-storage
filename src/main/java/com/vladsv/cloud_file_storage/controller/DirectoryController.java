@@ -21,14 +21,14 @@ public class DirectoryController {
     @ResponseStatus(HttpStatus.OK)
     @GetMapping
     public List<ResourceResponseDto> getDirectoryContent(@RequestParam("path") String path,
-                                                                         @AuthenticationPrincipal User user) {
+                                                         @AuthenticationPrincipal User user) {
         return directoryService.getDirectoryContent(path, user.getId());
     }
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
     public ResourceResponseDto createDirectory(@RequestParam("path") String path,
-                                                               @AuthenticationPrincipal User user) {
+                                               @AuthenticationPrincipal User user) {
         return directoryService.createEmptyDirectory(path, user.getId());
     }
 

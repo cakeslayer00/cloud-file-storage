@@ -1,17 +1,11 @@
 package com.vladsv.cloud_file_storage.mapper;
 
 import com.vladsv.cloud_file_storage.dto.ResourceResponseDto;
-import io.minio.Result;
 import io.minio.StatObjectResponse;
-import io.minio.errors.*;
 import io.minio.messages.Item;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 import utils.PathUtils;
-
-import java.io.IOException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 
 import static utils.PathUtils.isDir;
 
