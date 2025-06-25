@@ -1,12 +1,12 @@
 package com.vladsv.cloud_file_storage;
 
 import com.vladsv.cloud_file_storage.dto.UserRequestDto;
+import com.vladsv.cloud_file_storage.exception.UsernameAlreadyTakenException;
 import com.vladsv.cloud_file_storage.repository.UserRepository;
 import com.vladsv.cloud_file_storage.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +15,8 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 @SpringBootTest
@@ -59,7 +61,18 @@ public class AuthenticationServiceTests implements Containers {
         authService.register(mock, request, response);
 
         boolean condition = userRepository.existsByUsername(mock.username());
-        Assertions.assertTrue(condition);
+        assertTrue(condition);
+    }
+
+    @Test
+    public void givenAuthService_whenRegistrationMethodInvokedWithExistingUser_thenThrowAppropriateException() {
+        UserRequestDto mock = new UserRequestDto("J.R.R Tolkien", "password");
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        authService.register(mock, request, response);
+
+        assertThrows(UsernameAlreadyTakenException.class,() -> authService.register(mock, request, response));
     }
 
 }
