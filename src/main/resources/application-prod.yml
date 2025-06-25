@@ -1,0 +1,18 @@
+spring:
+  devtools:
+    add-properties: false
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      password: ${REDIS_PASSWORD}
+
+  minio:
+    endpoint: ${MINIO_URL}
+    username: ${MINIO_USERNAME}
+    password: ${MINIO_PASSWORD}

@@ -138,8 +138,8 @@ public class ResourceService {
                 .toList();
     }
 
-    public List<ResourceResponseDto> uploadResources(String path, MultipartFile[] files, Long id) {
-        if (files == null || files.length == 0) {
+    public List<ResourceResponseDto> uploadResources(String path, List<MultipartFile> files, Long id) {
+        if (files == null || files.isEmpty()) {
             throw new InvalidResourceUploadBodyException(NO_FILES_PROVIDED_FOR_UPLOAD);
         }
 
@@ -147,7 +147,7 @@ public class ResourceService {
         String relativePath = PathUtils.normalizePath(path);
         String absolutePath = rootDirectory + relativePath;
 
-        return Arrays.stream(files)
+        return files.stream()
                 .map(file -> uploadSingleFile(absolutePath, file, id))
                 .toList();
 

@@ -20,8 +20,8 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 100MB
-      max-request-size: 100MB
+      max-file-size: 50MB
+      max-request-size: 50MB
 
   data:
     redis:
@@ -33,7 +33,7 @@ spring:
     timeout: 3600
 
   minio:
-    endpoint: http://127.0.0.1:9000 #MINIO_ENDPOINT
-    access_key: JTpGn0KL6Fe0yDKKZUsv #MINIO_ACCESS_KEY
-    secret_key: QXHuDuXVJyOsDQ29gtQNIx0tsgZCZC62cUxvDIWq #MINIO_SECRET_KEY
+    endpoint: http://127.0.0.1:9000
+    username: root
+    password: password
     bucket_name: user-files

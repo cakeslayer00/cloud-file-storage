@@ -1,4 +1,4 @@
-package com.vladsv.cloud_file_storage.advice;
+package com.vladsv.cloud_file_storage.exception.handler;
 
 import com.vladsv.cloud_file_storage.dto.ErrorResponseDto;
 import com.vladsv.cloud_file_storage.dto.MultipleErrorResponseDto;
@@ -56,12 +56,6 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ExceptionHandler(ResourceDoesNotExistsException.class)
     public ErrorResponseDto handleResourceDoesNotExists(ResourceDoesNotExistsException e) {
-        return new ErrorResponseDto(e.getMessage());
-    }
-
-    @ResponseStatus(HttpStatus.CONFLICT)
-    @ExceptionHandler(ConflictingResourceException.class)
-    public ErrorResponseDto handleResourceAlreadyExists(ConflictingResourceException e) {
         return new ErrorResponseDto(e.getMessage());
     }
 

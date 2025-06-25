@@ -93,9 +93,9 @@ public class ResourceController {
     )
     @StandardResourceApiResponses
     @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_FORM_URLENCODED_VALUE}, produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public List<ResourceResponseDto> upload(@RequestParam("path") String path,
-                                            @RequestPart("object") MultipartFile[] files,
+                                            @RequestPart("object") List<MultipartFile> files,
                                             @AuthenticationPrincipal User user) {
         return resourceService.uploadResources(path, files, user.getId());
     }

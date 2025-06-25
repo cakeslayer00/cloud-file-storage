@@ -1,4 +1,4 @@
-package com.vladsv.cloud_file_storage.config;
+package com.vladsv.cloud_file_storage.config.security;
 
 import com.vladsv.cloud_file_storage.repository.UserRepository;
 import lombok.RequiredArgsConstructor;

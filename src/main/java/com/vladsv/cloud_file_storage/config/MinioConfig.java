@@ -17,7 +17,7 @@ public class MinioConfig {
     public MinioClient minioClient(MinioProperties properties) throws Exception {
         MinioClient client = MinioClient.builder()
                 .endpoint(properties.endpoint())
-                .credentials(properties.accessKey(), properties.secretKey()).build();
+                .credentials(properties.username(), properties.password()).build();
 
         boolean isBucketExists = client.bucketExists(BucketExistsArgs.builder().bucket(properties.bucketName()).build());
 
