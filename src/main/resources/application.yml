@@ -1,12 +1,7 @@
 spring:
+
   liquibase:
     enabled: true
-
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/db-dev
-    username: root
-    password: password
 
   jpa:
     hibernate:
@@ -23,17 +18,27 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: password
+  profiles:
+    default: dev
 
   session:
     timeout: 3600
 
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://db:5432/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      password: ${REDIS_PASSWORD}
+
   minio:
-    endpoint: http://127.0.0.1:9000
-    username: root
-    password: password
-    bucket_name: user-files
+    endpoint: ${MINIO_URL}
+    username: ${MINIO_USER}
+    password: ${MINIO_PASSWORD}
+    bucket_name: ${MINIO_BUCKET_NAME}
+
+

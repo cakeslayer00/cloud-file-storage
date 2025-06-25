@@ -4,6 +4,8 @@ services:
     container_name: web-app
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       SPRING_PROFILES_ACTIVE: prod
     depends_on:
@@ -21,9 +23,9 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=${DB_NAME}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     healthcheck:
@@ -38,15 +40,15 @@ services:
     volumes:
       - minio-data:/data
     environment:
-      MINIO_USERNAME: root
-      MINIO_PASSWORD: password
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
     ports:
       - "9000:9000"
     command: server --console-address ":9001" /data
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
-      interval: 30s
-      timeout: 20s
+      interval: 10s
+      timeout: 5s
       retries: 3
 
   redis:
@@ -57,7 +59,7 @@ services:
     ports:
       - "6379:6379"
     restart: unless-stopped
-    command: redis-server --save 60 1 --loglevel warning --requirepass password
+    command: redis-server --save 60 1 --loglevel warning --requirepass ${REDIS_PASSWORD}
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
