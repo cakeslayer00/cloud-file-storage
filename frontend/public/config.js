@@ -1,14 +1,14 @@
 window.APP_CONFIG = {
 
     //ссылка на ваш гитхаб репозиторий с проектом
-    githubLink: "https://github.com/cakeslayer00/cloud-file-storage",
+    githubLink: "https://github.com/cakeslayer00/cloud-file-storage.git",
 
     //Имя, которое отображается в хедере
     mainName: "CLOUD STORAGE",
 
     //адрес вашего бэка. если пустой - значит на одном url с таким же портом.
     //если запускаете бэк и фронт через докер compose - тут ставите имя бэка в докер сети
-    baseUrl: "http://app:8080",
+    baseUrl: "http://backend:8080",
 
     //API префикс вашего бэка
     baseApi: "/api",

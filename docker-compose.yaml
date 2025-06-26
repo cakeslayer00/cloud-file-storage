@@ -69,10 +69,10 @@ services:
   frontend:
     container_name: frontend
     build:
-      context: shite
-      dockerfile: frontend/Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     depends_on:
-      app:
+      backend:
         condition: service_started
     ports:
       - "80:80"

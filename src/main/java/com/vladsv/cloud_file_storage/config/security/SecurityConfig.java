@@ -4,6 +4,7 @@ import com.vladsv.cloud_file_storage.repository.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
@@ -31,7 +32,7 @@ import java.util.List;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, CorsConfigurationSource corsConfigurationSource) throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
                         .requestMatchers(
@@ -52,15 +53,30 @@ public class SecurityConfig {
                         .logoutSuccessUrl("/api/auth/sign-in")
                         .logoutSuccessHandler(onLogout()))
                 .httpBasic(Customizer.withDefaults())
-                .cors((cors) -> cors.configurationSource(corsConfigurationSource()))
+                .cors((cors) -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable);
 
 
         return http.build();
     }
 
-    @Bean
+    @Profile("prod")
+    @Bean("corsConfigurationSource")
     public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.addAllowedOrigin("http://frontend");
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    @Profile("!prod")
+    @Bean("corsConfigurationSource")
+    public CorsConfigurationSource corsConfigurationSourceDev() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.addAllowedOrigin("http://localhost");
         configuration.setAllowedMethods(List.of("*"));

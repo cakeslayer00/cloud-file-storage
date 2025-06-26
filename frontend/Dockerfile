@@ -1,9 +1,9 @@
-FROM node:22-alpine3.20 as build
+FROM node:22-alpine3.20 AS build
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm install
-COPY ../shite .
+COPY . .
 RUN npm run build
 
 FROM nginx:1.27-alpine
