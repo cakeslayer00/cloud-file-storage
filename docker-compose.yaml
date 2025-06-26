@@ -1,7 +1,7 @@
 services:
-  app:
+  backend:
     build: .
-    container_name: web-app
+    container_name: backend
     ports:
       - "8080:8080"
     env_file:
@@ -67,7 +67,7 @@ services:
       retries: 5
 
   frontend:
-    container_name: cloud-frontend
+    container_name: frontend
     build:
       context: ./cloud-storage-frontend
       dockerfile: Dockerfile
