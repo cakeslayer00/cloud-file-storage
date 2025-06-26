@@ -69,8 +69,8 @@ services:
   frontend:
     container_name: frontend
     build:
-      context: frontend
-      dockerfile: Dockerfile
+      context: shite
+      dockerfile: frontend/Dockerfile
     depends_on:
       app:
         condition: service_started
